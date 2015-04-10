@@ -1,0 +1,30 @@
+<html>
+<body>
+
+</body>
+<script src='./d3.v3.min.js'></script>
+<script>
+    d3.json("./tcp_output.json", function(result) {
+        console.log(result);
+        var bin = .1;
+        var extent = d3.extent(result, function(k){return +k.ts;});
+        var binNum = Math.ceil((extent[1] - extent[0])/bin);
+        var distribution= [];
+        for(var i=0;i<binNum;i++){
+            distribution[i]=0;
+        }
+        result.forEach(function(k){
+            var idx = Math.floor((k.ts-extent[0])/bin);
+            distribution[idx]++;
+        });
+    
+        console.log(distribution);
+        var scale = d3.scale.linear().domain(d3.extent(distribution)).range([0, 100]);
+        d3.select("body").append("svg").selectAll(".nothing")
+            .data(distribution).enter()
+            .append("rect").attr("width", 10).attr("height",function(k){return scale(k);})
+            .attr("x", function(k, i){return i*10;});
+        
+    });
+</script>
+</html>
