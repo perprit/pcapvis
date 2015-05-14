@@ -2,30 +2,37 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <script src='./d3.v3.min.js'></script>
+    <script src="{{ url_for('static', filename='d3.v3.min.js') }}"></script>
 </head>
 <body>
     <script>
-        d3.json("./tcp_output.json", function(result) {
-            var bin = .1;
-            var extent = d3.extent(result, function(k){return +k.ts;});
-            var binNum = Math.ceil((extent[1] - extent[0])/bin);
-            var distribution= [];
-            for(var i=0;i<binNum;i++){
-                distribution[i]=0;
-            }
-            result.forEach(function(k){
-                var idx = Math.floor((k.ts-extent[0])/bin);
-                distribution[idx]++;
-            });
-        
-            var scale = d3.scale.linear().domain(d3.extent(distribution)).range([0, 100]);
-            d3.select("body").append("svg").selectAll(".nothing")
-                .data(distribution).enter()
-                .append("rect").attr("width", 10).attr("height",function(k){return scale(k);})
-                .attr("x", function(k, i){return i*10;});
-            
-        });
+      var tcp_json = {{ tcp_json|safe }}
+      var bin = .1;
+      var extent = d3.extent(tcp_json, function(k){return +k.ts;});
+      var binNum = Math.ceil((extent[1] - extent[0])/bin);
+      var distribution= [];
+      
+      for(var i=0;i<binNum;i++){
+        distribution[i]=0;
+      }
+      
+      tcp_json.forEach(function(k){
+        var idx = Math.floor((k.ts-extent[0])/bin);
+        distribution[idx]++;
+      });
+      
+      var scale = d3.scale.linear().domain(d3.extent(distribution)).range([0, 100]);
+      d3.select("body").append("svg").selectAll(".nothing")
+        .data(distribution).enter()
+        .append("rect").attr("width", 10).attr("height",function(k){return scale(k);})
+        .attr("x", function(k, i){return i*10;});
+
     </script>
+    <h1>Upload new File</h1>
+    <form action="{{ url_for('upload_pcap') }}" method=post enctype=multipart/form-data>
+      <p>
+        <input type=file name=file>
+        <input type=submit value=Upload>
+    </form>
 </body>
 </html>

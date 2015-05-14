@@ -13,8 +13,12 @@ def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1] in ALLOWED_EXTENSIONS
 
 @app.route('/')
-def hello():
-    return render_template('tcp_json_view.html')
+def index():
+    if 'tcp_json' in request.args.keys():
+        tcp_json = request.args['tcp_json']
+    else:
+        tcp_json = {}
+    return render_template('tcp_json_view.html', tcp_json=tcp_json)
 
 @app.route('/upload', methods=['GET', 'POST'])
 def upload_pcap():
@@ -24,22 +28,13 @@ def upload_pcap():
             filename = secure_filename(fp.filename)
             fp.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
             return redirect(url_for('uploaded_file', filename=filename))
-    return '''
-    <!doctype html>
-    <title>Upload new File</title>
-    <h1>Upload new File</h1>
-    <form action="" method=post enctype=multipart/form-data>
-        <p>
-            <input type=file name=file>
-            <input type=submit value=Upload>
-    </form>
-    '''
+    return redirect(url_for('index'))
 
 @app.route('/uploads/<filename>')
 def uploaded_file(filename):
     with open(os.path.join(app.config['UPLOAD_FOLDER'], filename), 'r') as fp:
-        json = pcap_to_json(fp)
-    return json
+        tcp_json = pcap_to_json(fp)
+    return redirect(url_for('index', tcp_json=tcp_json))
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=12321)
