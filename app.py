@@ -1,6 +1,7 @@
 import os
 from flask import Flask, request, redirect, url_for, send_from_directory
 from werkzeug import secure_filename
+from pcap_parser import pcap_to_json 
 
 UPLOAD_FOLDER = 'uploaded_pcap'
 ALLOWED_EXTENSIONS = set(['pcap'])
@@ -36,7 +37,9 @@ def upload_pcap():
 
 @app.route('/uploads/<filename>')
 def uploaded_file(filename):
-    return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
+    with open(os.path.join(app.config['UPLOAD_FOLDER'], filename), 'r') as fp:
+        json = pcap_to_json(fp)
+    return json
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=12321)
