@@ -1,5 +1,5 @@
 import os
-from flask import Flask, request, redirect, url_for, send_from_directory
+from flask import Flask, request, redirect, url_for, send_from_directory, render_template
 from werkzeug import secure_filename
 from pcap_parser import pcap_to_json 
 
@@ -14,7 +14,7 @@ def allowed_file(filename):
 
 @app.route('/')
 def hello():
-    return 'hello world'
+    return render_template('tcp_json_view.html')
 
 @app.route('/upload', methods=['GET', 'POST'])
 def upload_pcap():
