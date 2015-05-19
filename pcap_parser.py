@@ -11,6 +11,7 @@ def pcap_to_json(fp):
     		'sport' : ip_hdr.data.sport,
     		'dst' : socket.inet_ntoa(ip_hdr.dst),
     		'dport' : ip_hdr.data.dport,
+    		'datalen' : len(ip_hdr.data.data),
     		'ipv' : ip_hdr.v,
     		'seq' : ip_hdr.data.seq,
     		'ack' : ip_hdr.data.ack,
