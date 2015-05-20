@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <!-- library -->
+    <script src="{{ url_for('static', filename='js/library/d3.v3.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/library/jquery-1.11.3.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/library/bootstrap.min.js') }}"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/library/bootstrap.min.css') }}"></link>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/library/bootstrap-theme.min.css') }}"></link>
+
+    <!-- custom -->
+    <script>
+        var tcp_json = {{ tcp_json|safe }}
+    </script>
+    <script src="{{ url_for('static', filename='js/tcp_json_view.js') }}"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}"></link>
+</head>
+<body>
+    <div class="navbar navbar-default">
+        <form class="navbar-form navbar-right" action="{{ url_for('upload_pcap') }}" method=post enctype=multipart/form-data>
+            <input type=file name=file>
+            <input type=submit value=Upload>
+        </form>
+    </div>
+    <div class="graph-view">
+    </div>
+</body>
+</html>
+

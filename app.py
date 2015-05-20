@@ -18,7 +18,7 @@ def index():
         tcp_json = request.args['tcp_json']
     else:
         tcp_json = {}
-    return render_template('tcp_json_view.html', tcp_json=tcp_json)
+    return render_template('layout.html', tcp_json=tcp_json)
 
 @app.route('/upload', methods=['GET', 'POST'])
 def upload_pcap():
