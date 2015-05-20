@@ -22,6 +22,9 @@
     <!-- navbar -->
     <div class="navbar navbar-default">
         <a class="navbar-brand" href="#">PCAPvis</a>
+        <ul class="nav navbar-nav">
+            <li> <a href="#"> {{ filename }}</a></li>
+        </ul>
         <form class="navbar-form navbar-right" action="{{ url_for('upload_pcap') }}" method=post enctype=multipart/form-data>
             <input class="filestyle" data-icon="false" data-size="sm" data-buttonBefore="true" type=file name=file>
             <input class="btn btn-default btn-sm" type=submit value="Upload">

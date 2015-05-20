@@ -18,12 +18,22 @@ def index():
         tcp_json = request.args['tcp_json']
     else:
         tcp_json = {}
-    return render_template('layout.html', tcp_json=tcp_json)
+
+    if 'filename' in request.args.keys():
+        filename = request.args['filename']
+    else:
+        filename = "File Not Uploaded"
+
+    return render_template('layout.html', tcp_json=tcp_json, filename=filename)
 
 @app.route('/upload', methods=['GET', 'POST'])
 def upload_pcap():
     if request.method == 'POST':
         fp = request.files['file']
+        # if UPLOAD_FOLDER directory does not exist, create it
+        if not os.path.exists(app.config['UPLOAD_FOLDER']):
+            os.makedirs(app.config['UPLOAD_FOLDER'])
+        # uploading the PCAP file
         if fp and allowed_file(fp.filename):
             filename = secure_filename(fp.filename)
             fp.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
@@ -34,7 +44,7 @@ def upload_pcap():
 def uploaded_file(filename):
     with open(os.path.join(app.config['UPLOAD_FOLDER'], filename), 'r') as fp:
         tcp_json = pcap_to_json(fp)
-    return redirect(url_for('index', tcp_json=tcp_json))
+    return redirect(url_for('index', tcp_json=tcp_json, filename=filename))
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=12321)
