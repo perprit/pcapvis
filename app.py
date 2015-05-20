@@ -42,7 +42,7 @@ def upload_pcap():
 
 @app.route('/uploads/<filename>')
 def uploaded_file(filename):
-    with open(os.path.join(app.config['UPLOAD_FOLDER'], filename), 'r') as fp:
+    with open(os.path.join(app.config['UPLOAD_FOLDER'], filename), 'rb') as fp:
         tcp_json = pcap_to_json(fp)
     return redirect(url_for('index', tcp_json=tcp_json, filename=filename))
 

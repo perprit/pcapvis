@@ -26,7 +26,7 @@ def pcap_to_json(fp):
     	}
     	for ts, ip_hdr
     	in [(ts, dpkt.ethernet.Ethernet(buf).data) for ts, buf in list(pcap)]
-    	if ip_hdr.p == 6
+    	if hasattr(ip_hdr, 'p') and ip_hdr.p == 6
     ]
 
     return json.dumps(tcps)
