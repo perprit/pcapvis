@@ -2,10 +2,12 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <!-- library -->
+    <!-- load library -->
     <script src="{{ url_for('static', filename='js/library/d3.v3.min.js') }}"></script>
     <script src="{{ url_for('static', filename='js/library/jquery-1.11.3.min.js') }}"></script>
     <script src="{{ url_for('static', filename='js/library/bootstrap.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/library/bootstrap-filestyle.min.js') }}"></script>
+
     <link rel="stylesheet" href="{{ url_for('static', filename='css/library/bootstrap.min.css') }}"></link>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/library/bootstrap-theme.min.css') }}"></link>
 
@@ -17,13 +19,30 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}"></link>
 </head>
 <body>
+    <!-- navbar -->
     <div class="navbar navbar-default">
+        <a class="navbar-brand" href="#">PCAPvis</a>
         <form class="navbar-form navbar-right" action="{{ url_for('upload_pcap') }}" method=post enctype=multipart/form-data>
-            <input type=file name=file>
-            <input type=submit value=Upload>
+            <input class="filestyle" data-icon="false" data-size="sm" data-buttonBefore="true" type=file name=file>
+            <input class="btn btn-default btn-sm" type=submit value="Upload">
         </form>
     </div>
-    <div class="graph-view">
+
+    <!-- container -->
+    <div class="container-fluid">
+        <div class="col-md-8">
+            <div class="graph-view">
+                graph-view
+            </div>
+            <div class="filter-controller">
+                filter-controller
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="ip-list-view">
+                ip-list-view
+            </div>
+        </div>
     </div>
 </body>
 </html>
