@@ -33,5 +33,4 @@ def pcap_to_json(fp):
 
 if __name__ == '__main__':
     with open('../github.pcap', 'rb') as fp:
-        pass
-        #print pcap_to_json(fp)
+        print pcap_to_json(fp)
