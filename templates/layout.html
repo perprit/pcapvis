@@ -7,9 +7,11 @@
     <script src="{{ url_for('static', filename='js/library/jquery-1.11.3.min.js') }}"></script>
     <script src="{{ url_for('static', filename='js/library/bootstrap.min.js') }}"></script>
     <script src="{{ url_for('static', filename='js/library/bootstrap-filestyle.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/library/d3.slider.js') }}"></script>
 
     <link rel="stylesheet" href="{{ url_for('static', filename='css/library/bootstrap.min.css') }}"></link>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/library/bootstrap-theme.min.css') }}"></link>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/library/d3.slider.css') }}"></link>
 
     <!-- custom -->
     <script src="{{ url_for('static', filename='js/tcp_json_view.js') }}"></script>
@@ -33,6 +35,9 @@
             </div>
             <div class="filter-controller">
                 filter-controller
+                <p id="slider3textmin"></p>
+                <p id="slider3textmax"></p>
+                <div id="slider3"></div>
             </div>
         </div>
         <div class="col-md-4">

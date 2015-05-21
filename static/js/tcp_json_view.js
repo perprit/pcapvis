@@ -10,11 +10,30 @@ $(function() {
             processData: false,
             async: false,
             success: function(data) {
-                drawBarChart(JSON.parse(data));
+                d = JSON.parse(data);
+                drawBarChart(d);
+                drawSlider(d);
             },
         });
     });
 });
+
+function drawSlider(data){
+    var ts = [];
+    for(var i=0; i<data.length; i++){
+        ts[i] = data[i].ts;
+    }
+    d3.select('#slider3')
+        .call(d3.slider()
+        .axis(true)
+        .min(d3.min(ts))
+        .max(d3.max(ts))
+        .value(d3.extent(ts))
+        .on("slide", function(evt, value) {
+            d3.select('#slider3textmin').text(value[ 0 ]);
+            d3.select('#slider3textmax').text(value[ 1 ]);
+        }));
+}
 
 function drawBarChart(data){
     var bin = 0.1;
