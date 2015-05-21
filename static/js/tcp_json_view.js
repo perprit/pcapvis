@@ -18,6 +18,7 @@ $(function() {
 });
 
 function drawSlider(data, freq){
+    $('#slider3').text('');
     d3.select('#slider3')
         .call(d3.slider()
         .axis(true)
