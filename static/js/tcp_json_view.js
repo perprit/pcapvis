@@ -1,6 +1,24 @@
-$(function(){
+$(function() {
+    $('#upload-file-btn').click(function() {
+        var form_data = new FormData($('#upload-file')[0]);
+        $.ajax({
+            type: 'POST',
+            url: '/upload',
+            data: form_data,
+            contentType: false,
+            cache: false,
+            processData: false,
+            async: false,
+            success: function(data) {
+                drawBarChart(JSON.parse(data));
+            },
+        });
+    });
+});
+
+function drawBarChart(data){
     var bin = 0.1;
-    var extent = d3.extent(tcp_json, function(d){ return d.ts; });
+    var extent = d3.extent(data, function(d){ return d.ts; });
     var binNum = Math.ceil((extent[1] - extent[0])/bin);
     var freq = [];
 
@@ -8,7 +26,7 @@ $(function(){
         freq[i] = 0;
     }
 
-    tcp_json.forEach(function(d){
+    data.forEach(function(d){
     var idx = Math.floor((d.ts-extent[0])/bin);
         freq[idx]++;
     })
@@ -36,6 +54,7 @@ $(function(){
         .orient('left')
         .ticks(10, 'trs');
 
+    $(".graph-view").text('');
     var svg = d3.select('.graph-view').append('svg')
         .attr('width', width + margin.left + margin.right)
         .attr('height', height + margin.top + margin.bottom)
@@ -62,4 +81,4 @@ $(function(){
         .attr('width', function(d) { return width/binNum; })
         .attr('y', function(d) { return y(d[1]); })
         .attr('height', function(d) { return height - y(d[1]); });
-})
+}

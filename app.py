@@ -1,5 +1,5 @@
 import os
-from flask import Flask, request, redirect, url_for, send_from_directory, render_template
+from flask import Flask, request, redirect, url_for, send_from_directory, render_template, jsonify
 from werkzeug import secure_filename
 from pcap_parser import pcap_to_json 
 
@@ -14,17 +14,12 @@ def allowed_file(filename):
 
 @app.route('/')
 def index():
-    if 'tcp_json' in request.args.keys():
-        tcp_json = request.args['tcp_json']
-    else:
-        tcp_json = {}
-
     if 'filename' in request.args.keys():
         filename = request.args['filename']
     else:
         filename = "File Not Uploaded"
 
-    return render_template('layout.html', tcp_json=tcp_json, filename=filename)
+    return render_template('layout.html', filename=filename)
 
 @app.route('/upload', methods=['GET', 'POST'])
 def upload_pcap():
@@ -37,14 +32,10 @@ def upload_pcap():
         if fp and allowed_file(fp.filename):
             filename = secure_filename(fp.filename)
             fp.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-            return redirect(url_for('uploaded_file', filename=filename))
-    return redirect(url_for('index'))
-
-@app.route('/uploads/<filename>')
-def uploaded_file(filename):
-    with open(os.path.join(app.config['UPLOAD_FOLDER'], filename), 'rb') as fp:
-        tcp_json = pcap_to_json(fp)
-    return redirect(url_for('index', tcp_json=tcp_json, filename=filename))
+            with open(os.path.join(app.config['UPLOAD_FOLDER'], filename), 'rb') as fp:
+                tcp_json = pcap_to_json(fp)
+            return tcp_json
+    return None
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=12321)
