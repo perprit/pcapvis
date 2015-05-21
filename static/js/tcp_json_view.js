@@ -12,27 +12,74 @@ $(function() {
             success: function(data) {
                 d = JSON.parse(data);
                 drawBarChart(d);
-                drawSlider(d);
             },
         });
     });
 });
 
-function drawSlider(data){
-    var ts = [];
-    for(var i=0; i<data.length; i++){
-        ts[i] = data[i].ts;
-    }
+function drawSlider(data, freq){
     d3.select('#slider3')
         .call(d3.slider()
         .axis(true)
-        .min(d3.min(ts))
-        .max(d3.max(ts))
-        .value(d3.extent(ts))
+        .min(0)
+        .max(d3.max(freq)-d3.min(freq))
+        .value([0, d3.max(freq)-d3.min(freq)])
         .on("slide", function(evt, value) {
+            updateBarChart(data, value);
             d3.select('#slider3textmin').text(value[ 0 ]);
             d3.select('#slider3textmax').text(value[ 1 ]);
         }));
+}
+
+function updateBarChart(data, range){
+    var bin = 0.1;
+    var extent = d3.extent(data, function(d){ return d.ts; });
+    var binNum = Math.ceil((extent[1] - extent[0])/bin);
+    var freq = [];
+
+    var margin = {top: 20, right: 20, bottom: 30, left: 40};
+    var width = 960 - margin.left - margin.right;
+    var height = 500 - margin.top - margin.bottom;
+
+    for(var i=0; i<binNum; i++){
+        freq[i] = 0;
+    }
+
+    data.forEach(function(d){
+    var idx = Math.floor((d.ts-extent[0])/bin);
+        freq[idx]++;
+    })
+
+    for(var i=0; i<freq.length; i++){
+        if(freq[i] < range[0] || freq[i] > range[1]){
+            freq[i] = 0;
+        }
+    }
+
+    var dist = d3.zip(d3.range(0, binNum, bin), freq);
+
+    var y = d3.scale.linear()
+        .range([height, 0]);
+
+    var yAxis = d3.svg.axis()
+        .scale(y)
+        .orient('left')
+        .ticks(10, 'trs');
+
+    y.domain(d3.extent(dist, function(d) { return d[1]; }));
+
+    d3.select('.y.axis')
+        .transition()
+        .duration(750)
+        .call(yAxis);
+
+    var bar = d3.select('svg').selectAll('.bar')
+        .data(dist);
+
+    bar.transition().duration(750)
+        .attr('y', function(d) { return y(d[1]); })
+        .attr('height', function(d) { return height - y(d[1]); });
+
 }
 
 function drawBarChart(data){
@@ -50,7 +97,9 @@ function drawBarChart(data){
         freq[idx]++;
     })
 
-    var dist = d3.zip(d3.range(0, binNum, 0.1), freq);
+    drawSlider(data, freq);
+
+    var dist = d3.zip(d3.range(0, binNum, bin), freq);
 
     //console.log(dist);
 
