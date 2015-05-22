@@ -58,6 +58,9 @@ target/
 
 desktop.ini
 
+# DS_Store
+.DS_Store
+
 # custom
 *.swp
 *.pyc
