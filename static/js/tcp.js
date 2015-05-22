@@ -33,21 +33,18 @@ function drawSlider(data, freq){
 }
 
 function updateBarChart(data, range){
-    //console.log(data);
-	  var bin = 0.1;
+    var bin = 0.1;
    	var extent = d3.extent(data, function(d){ return d.ts; });
     var binNum = Math.ceil((extent[1] - extent[0])/bin);
    	var freq = [];
-
 	
     var margin = {top: 20, right: 20, bottom: 30, left: 40};
     var width = 960 - margin.left - margin.right;
     var height = 500 - margin.top - margin.bottom;
 
-
     data.forEach(function(d){
-    	var idx = Math.floor((d.ts-extent[0])/bin);
-      freq[idx] == undefined ? freq[idx] = 1 : freq[idx]++;
+        var idx = Math.floor((d.ts-extent[0])/bin);
+        freq[idx] == undefined ? freq[idx] = 1 : freq[idx]++;
     });
 
     for(var i=0; i<freq.length; i++){
@@ -87,7 +84,7 @@ function drawBarChart(data){
     for(var i=0;i<binNum;i++) freq[i]=0;
 
     data.forEach(function(d){
-    	  var idx = Math.floor((d.ts-extent[0])/bin);
+    	var idx = Math.floor((d.ts-extent[0])/bin);
         freq[idx]+=d.datalen;
         var src = d.src+':'+d.sport;
         var dst = d.dst+':'+d.dport;
@@ -97,12 +94,9 @@ function drawBarChart(data){
         ip_list[src][dst]+=d.datalen;  
     });
 
-    console.log(data);
-    console.log(ip_list);
-
     var dist = d3.zip(d3.range(0, binNum, bin), freq);
     var margin = {top: 20, right: 20, bottom: 30, left: 40};
-    var width = 1280 - margin.left - margin.right;
+    var width = $("#graph-view").width() - margin.left - margin.right;
     var height = 500 - margin.top - margin.bottom;
 
     var x = d3.scale.linear().range([0, width-margin.left-margin.right]).domain(d3.extent(dist, function(d){return d[0];}));
@@ -111,9 +105,9 @@ function drawBarChart(data){
     var xAxis = d3.svg.axis().scale(x).orient('bottom');
     var yAxis = d3.svg.axis().scale(y).orient('left').ticks(10, 'trs');
 
-    $(".graph-view").text('');
+    $("#graph-view").text('');
     
-    var svg = d3.select('.graph-view').append('svg')
+    var svg = d3.select('#graph-view').append('svg')
         .attr('width', width + margin.left + margin.right)
         .attr('height', height + margin.top + margin.bottom)
         .append('g')
@@ -127,7 +121,7 @@ function drawBarChart(data){
         .attr('class', 'bar')
         .attr('width', function(d) { return (width-margin.left-margin.right)/binNum; })
         .attr('height', function(d) { return height - y(d[1]); })
-	      .attr('transform', function(d){return 'translate('+x(d[0]) +',' +y(d[1])+')';});
+	    .attr('transform', function(d){return 'translate('+x(d[0]) +',' +y(d[1])+')';});
     displayIPList(ip_list);
 }
 
@@ -136,7 +130,7 @@ function displayIPList(data){
     obj_src.forEach(function(src){
         var obj_dst = Object.keys(data[src]);
         obj_dst.forEach(function(dst){
-            d3.select('.ip-list-view').append("div")
+            d3.select('#ip-list-view').append("div")
               .text(function(){return src+' '+dst+' '+data[src][dst];});
         });
     });

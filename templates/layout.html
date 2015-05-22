@@ -14,7 +14,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/library/d3.slider.css') }}"></link>
 
     <!-- custom -->
-    <script src="{{ url_for('static', filename='js/tcp_json_view.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/tcp.js') }}"></script>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}"></link>
 </head>
 <body>
@@ -29,20 +29,17 @@
 
     <!-- container -->
     <div class="container-fluid">
-        <div class="col-md-8">
-            <div class="graph-view">
-                graph-view
+        <div class="col-md-9">
+            <div id="graph-view">
             </div>
-            <div class="filter-controller">
-                filter-controller
+            <div id="filter-controller">
                 <p id="slider3textmin"></p>
                 <p id="slider3textmax"></p>
                 <div id="slider3"></div>
             </div>
         </div>
-        <div class="col-md-4">
-            <div class="ip-list-view">
-                ip-list-view
+        <div class="col-md-3">
+            <div id="ip-list-view">
             </div>
         </div>
     </div>
