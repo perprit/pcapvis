@@ -17,111 +17,129 @@ $(function() {
     });
 });
 
-function drawSlider(data, freq){
-    $('#slider3').text('');
-    d3.select('#slider3')
-        .call(d3.slider()
-        .axis(true)
-        .min(0)
-        .max(d3.max(freq)-d3.min(freq))
-        .value([0, d3.max(freq)-d3.min(freq)])
-        .on("slide", function(evt, value) {
-            updateBarChart(data, value);
-            d3.select('#slider3textmin').text(value[ 0 ]);
-            d3.select('#slider3textmax').text(value[ 1 ]);
-        }));
-}
-
-function updateBarChart(data, range){
-    var bin = 0.1;
-   	var extent = d3.extent(data, function(d){ return d.ts; });
+function drawBarChart(data){
+    var bin = 0.05;
+    var extent_initial = d3.extent(data, function(d){ return d.ts; });
+    var extent = [0, extent_initial[1]-extent_initial[0]];
     var binNum = Math.ceil((extent[1] - extent[0])/bin);
-   	var freq = [];
-	
-    var margin = {top: 20, right: 20, bottom: 30, left: 40};
-    var width = 960 - margin.left - margin.right;
-    var height = 500 - margin.top - margin.bottom;
-
-    data.forEach(function(d){
-        var idx = Math.floor((d.ts-extent[0])/bin);
-        freq[idx] == undefined ? freq[idx] = 1 : freq[idx]++;
-    });
-
-    for(var i=0; i<freq.length; i++){
-      if(freq[i] < range[0] || freq[i] > range[1]){
-    		freq[i] = 0;
-      }
+    if(binNum>400){
+      bin = (extent[1]-extent[0])/400;
+      binNum = 400;
     }
 
-    var dist = d3.zip(d3.range(0, binNum, bin), freq);
+    function setData(ext){
+      var ret = {freq:[], ip_list:{}};
+      for(var i=0;i<binNum;i++) ret.freq[i]=0;
+      data.forEach(function(d){
+          if(d.ts-extent_initial[0]>ext[1]||d.ts-extent_initial[0]<ext[0]) return;
+          console.log("..");
+          var idx = Math.floor((d.ts-extent_initial[0]-ext[0])/bin);
+          if(idx == binNum) idx--;
+          ret.freq[idx]+=d.datalen;
+          var src = d.src+':'+d.sport;
+          var dst = d.dst+':'+d.dport;
+          if(ret.ip_list[src] == undefined) ret.ip_list[src]={};
+          if(ret.ip_list[src][dst] == undefined) ret.ip_list[src][dst]=0;
+          ret.ip_list[src][dst]+=d.datalen;  
+      });
+      return ret;
+    }
 
-    var y = d3.scale.linear().range([height, 0]);
-
-    var yAxis = d3.svg.axis().scale(y).orient('left').ticks(10, 'trs');
-
-    y.domain(d3.extent(dist, function(d) { return d[1]; }));
-
-    d3.select('.y.axis')
-        .transition()
-        .duration(750)
-        .call(yAxis);
-
-    var bar = d3.select('svg').selectAll('.bar')
-        .data(dist);
-
-    bar.transition().duration(750)
-        .attr('y', function(d) { return y(d[1]); })
-        .attr('height', function(d) { return height - y(d[1]); });
-	
-}
-
-function drawBarChart(data){
-    var bin = 0.1;
-    var extent = d3.extent(data, function(d){ return d.ts; });
-    var binNum = Math.ceil((extent[1] - extent[0])/bin);
-    var ip_list ={};
-    var freq = [];
-    for(var i=0;i<binNum;i++) freq[i]=0;
-
-    data.forEach(function(d){
-    	var idx = Math.floor((d.ts-extent[0])/bin);
-        freq[idx]+=d.datalen;
-        var src = d.src+':'+d.sport;
-        var dst = d.dst+':'+d.dport;
-
-        if(ip_list[src] == undefined) ip_list[src]={};
-        if(ip_list[src][dst] == undefined) ip_list[src][dst]=0;
-        ip_list[src][dst]+=d.datalen;  
-    });
-
-    var dist = d3.zip(d3.range(0, binNum, bin), freq);
-    var margin = {top: 20, right: 20, bottom: 30, left: 40};
-    var width = $("#graph-view").width() - margin.left - margin.right;
-    var height = 500 - margin.top - margin.bottom;
-
-    var x = d3.scale.linear().range([0, width-margin.left-margin.right]).domain(d3.extent(dist, function(d){return d[0];}));
-    var y = d3.scale.linear().range([height, 0]).domain(d3.extent(dist, function(d){return d[1];}));
-
-    var xAxis = d3.svg.axis().scale(x).orient('bottom');
-    var yAxis = d3.svg.axis().scale(y).orient('left').ticks(10, 'trs');
-
-    $("#graph-view").text('');
+    var initialData = setData(extent);
+    var freq = initialData.freq;
+    var ip_list = initialData.ip_list;
+    var margin = {top: 20, right: 20, bottom: 30, left: 60};
+    var width = $('#graph-view').width()-margin.left-margin.right;
+    var height = 450 - margin.top - margin.bottom;
+    var xScale = d3.scale.linear().range([0, width-margin.left-margin.right]).domain([extent[0], extent[1]]).clamp(true);
+    var xScale_init = d3.scale.linear().range([0, width-margin.left-margin.right]).domain([extent[0], extent[1]]);
+    var yScale = d3.scale.linear().range([height, 0]).domain([0, d3.max(freq, function (k){return +k;})]);
     
-    var svg = d3.select('#graph-view').append('svg')
+    var xAxis = d3.svg.axis().scale(xScale).orient('bottom');
+    var yAxis = d3.svg.axis().scale(yScale).orient('left');
+
+    var graph = d3.select('#graph-view').append('svg')
         .attr('width', width + margin.left + margin.right)
         .attr('height', height + margin.top + margin.bottom)
-        .append('g')
-        .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
-
-    svg.append('g').attr('class', 'x axis').attr("transform", "translate(0," + height + ")").call(xAxis);
-    svg.append('g').attr('class', 'y axis').call(yAxis);
-
-    svg.selectAll('.bar').data(dist)
-        .enter().append('rect')
+        .append('g').attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+  
+    var graph_xAxis = graph.append('g').attr('class', 'x axis').attr("transform", "translate(0," + height + ")").call(xAxis);
+    var graph_yAxis = graph.append('g').attr('class', 'y axis').call(yAxis);
+    var graph_bars = graph.append('g');
+    graph_bars.selectAll('.bar').data(freq).enter().append('rect')
         .attr('class', 'bar')
-        .attr('width', function(d) { return (width-margin.left-margin.right)/binNum; })
-        .attr('height', function(d) { return height - y(d[1]); })
-	    .attr('transform', function(d){return 'translate('+x(d[0]) +',' +y(d[1])+')';});
+        .attr('width', width/binNum)
+        .attr('height', function(k) { return height - yScale(k); })
+	      .attr('transform', function(k, i){return 'translate('+xScale(i*bin) +',' +yScale(k)+')';});
+
+    console.log(graph_bars);
+    var minimap = d3.select('#graph-minimap').append('svg')
+        .attr('width', width+margin.left+margin.right)
+        .attr('height', height/2)
+        .append('g').attr('transform', 'translate('+margin.left+','+margin.top+')');
+
+    minimap.selectAll(".nothing")
+        .data(freq).enter()
+        .append('rect')
+        .attr('width', width/binNum)
+        .attr('height', function(k){return (height-yScale(k))/6})
+        .attr('transform', function(k, i){return 'translate('+xScale(i*bin)+','+yScale(k)/6+')';});
+  
+    var brush_graph = d3.svg.brush().x(xScale).on('brush', graph_brush).on('brushend',graph_brushend);  
+    var brush_graph_g = graph.append('g').attr('transform', 'translate(0,'+(height)+')');
+    brush_graph_g.call(brush_graph).selectAll('rect').attr('height', 25).style('opacity', 0.3);
+
+    var brush_minimap = d3.svg.brush().x(xScale_init).on('brush', minimap_brush).on('brushend', minimap_brushend);
+    var brush_minimap_g = minimap.append('g');
+    brush_minimap_g.call(brush_minimap).selectAll('rect').attr('height', height/6).style('opacity', 0.3);
+   
+    function graph_brush(){
+        brush_minimap.extent(brush_graph.extent());
+        brush_minimap_g.call(brush_minimap);
+    }
+    function graph_brushend(){
+        updateGraph();
+    } 
+    function minimap_brush(){
+        brush_graph.extent(brush_minimap.extent());
+        brush_graph_g.call(brush_graph);
+    }
+    function minimap_brushend(){
+        updateGraph();
+    } 
+    function updateGraph(){
+        var ext = brush_graph.extent();
+        if(Math.ceil((ext[1]-ext[0])/0.05)>400){
+            bin = (ext[1]-ext[0])/400;
+            binNum = 400;
+        }
+        else{
+            bin=0.05;
+            binNum = Math.ceil((ext[1]-ext[0])/0.05);
+        }
+        var newData = setData(ext);
+        xScale.domain([ext[0], ext[1]]);
+        yScale.domain([0, d3.max(newData.freq, function(k){return +k;})]); 
+
+        var new_graph_bars = graph_bars.selectAll('.bar').data(newData.freq);
+        
+        new_graph_bars
+            .attr('class', 'bar')
+            .attr('width', width/binNum)
+            .attr('height', function(k){return height-yScale(k);})
+            .attr('transform', function(k, i){return 'translate('+xScale(i*bin+ext[0])+','+yScale(k)+')';})
+            .style('visibility', 'visible');
+       
+
+        new_graph_bars.exit().style('visibility', 'hidden');    
+        xAxis.scale(xScale);
+        yAxis.scale(yScale);
+        graph_xAxis.call(xAxis);
+        graph_yAxis.call(yAxis);
+
+        brush_graph.x(xScale).extent(ext);
+        brush_graph_g.call(brush_graph);
+    }
     displayIPList(ip_list);
 }
 
