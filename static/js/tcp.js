@@ -27,13 +27,6 @@ $(function() {
             }
         });
     });
-
-    // bind enter key to ip-search
-    $(document).keypress(function(e) {
-        if (e.which == 13) {
-            $('#ip-search').click();
-        }
-    });
 });
 
 function drawBarChart(data){    
@@ -186,7 +179,8 @@ function updateIPList(data){
     // TODO refresh whole ip-entry(remove-and-append)
     // wanted to implement this with joins, 
     // but cannot determine constant id for each [src][dst] ~ packet
-    var ip_list_view = d3.select("#ip-list").text("");
+    var ip_list_view = d3.select("#ip-list");
+    ip_list_view.text("");
     ip_list.forEach(function(ip) {
         ip_list_view.append("p")
             .classed("ip-entry", true)
@@ -194,21 +188,16 @@ function updateIPList(data){
             .text(function(){ return ip.src+' '+ip.dst+' '+ip.datalen; });
     });
 
-    $('#ip-search').click(function() {
-        d3.select("#ip-list").text("");
-        var input = $('#ip-input')[0].value;
-        var new_ip_list = [];
-        ip_list.forEach(function(ip) {
-            if(ip.src.indexOf(input) > -1 || ip.dst.indexOf(input) > -1) {
-                new_ip_list.push(ip);
+
+    var ip_input = $('#ip-input');
+    ip_input.keyup(function() {
+        var input = ip_input[0].value;
+        $("#ip-list > p").each(function() {
+            if($(this).text().search(input) > -1) {
+                $(this).show();
+            } else {
+                $(this).hide();
             }
-        });
-        // add entry
-        new_ip_list.forEach(function(ip) {
-            ip_list_view.append("p")
-                .classed("ip-entry", true)
-                .classed("unselectable", true)
-                .text(function(){ return ip.src+' '+ip.dst+' '+ip.datalen; });
         });
         //var ip_entry = d3.select('#ip-list').selectAll('.ip-entry').data(new_ip_list);
         //ip_entry.enter().append("p")
