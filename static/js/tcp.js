@@ -1,5 +1,11 @@
 $(function() {
     $('#upload-file-btn').click(function() {
+        var overlay = $("<div class='overlay'> </div>");
+        var spinner = $("<div class='spinner'> </div>");
+        overlay.appendTo($("body"));
+        spinner.appendTo($("body"));
+        console.log("appended");
+
         var form_data = new FormData($('#upload-file')[0]);
         $.ajax({
             type: 'POST',
@@ -8,16 +14,24 @@ $(function() {
             contentType: false,
             cache: false,
             processData: false,
-            async: false,
+            async: true,
             success: function(data) {
                 d = JSON.parse(data);
                 drawBarChart(d);
             },
+            error: function(jqXHR, textStatus, errorThrown) {
+                alert(textStatus + ", " + errorThrown);
+            },
+            complete: function() {
+                overlay.remove();
+                spinner.remove();
+            }
         });
     });
 });
 
-function drawBarChart(data){
+function drawBarChart(data){    
+    // main
     var bin = 0.05;
     var extent_initial = d3.extent(data, function(d){ return d.ts; });
     var extent = [0, extent_initial[1]-extent_initial[0]];
@@ -25,24 +39,6 @@ function drawBarChart(data){
     if(binNum>400){
       bin = (extent[1]-extent[0])/400;
       binNum = 400;
-    }
-
-    function setData(ext){
-      var ret = {freq:[], ip_list:{}};
-      for(var i=0;i<binNum;i++) ret.freq[i]=0;
-      data.forEach(function(d){
-          if(d.ts-extent_initial[0]>ext[1]||d.ts-extent_initial[0]<ext[0]) return;
-          console.log("..");
-          var idx = Math.floor((d.ts-extent_initial[0]-ext[0])/bin);
-          if(idx == binNum) idx--;
-          ret.freq[idx]+=d.datalen;
-          var src = d.src+':'+d.sport;
-          var dst = d.dst+':'+d.dport;
-          if(ret.ip_list[src] == undefined) ret.ip_list[src]={};
-          if(ret.ip_list[src][dst] == undefined) ret.ip_list[src][dst]=0;
-          ret.ip_list[src][dst]+=d.datalen;  
-      });
-      return ret;
     }
 
     var initialData = setData(extent);
@@ -92,7 +88,29 @@ function drawBarChart(data){
     var brush_minimap = d3.svg.brush().x(xScale_init).on('brush', minimap_brush).on('brushend', minimap_brushend);
     var brush_minimap_g = minimap.append('g');
     brush_minimap_g.call(brush_minimap).selectAll('rect').attr('height', height/6).style('opacity', 0.3);
-   
+
+    displayIPList(ip_list);
+
+    // calculate sum of datalen for each bin
+    function setData(ext){
+      var ret = {freq:[], ip_list:{}};
+      for(var i=0;i<binNum;i++) ret.freq[i]=0;
+      data.forEach(function(d){
+          if(d.ts-extent_initial[0]>ext[1]||d.ts-extent_initial[0]<ext[0]) return;
+          console.log("..");
+          var idx = Math.floor((d.ts-extent_initial[0]-ext[0])/bin);
+          if(idx == binNum) idx--;
+          ret.freq[idx]+=d.datalen;
+          var src = d.src+':'+d.sport;
+          var dst = d.dst+':'+d.dport;
+          if(ret.ip_list[src] == undefined) ret.ip_list[src]={};
+          if(ret.ip_list[src][dst] == undefined) ret.ip_list[src][dst]=0;
+          ret.ip_list[src][dst]+=d.datalen;  
+      });
+      return ret;
+    }
+
+    // brush functions
     function graph_brush(){
         brush_minimap.extent(brush_graph.extent());
         brush_minimap_g.call(brush_minimap);
@@ -140,7 +158,6 @@ function drawBarChart(data){
         brush_graph.x(xScale).extent(ext);
         brush_graph_g.call(brush_graph);
     }
-    displayIPList(ip_list);
 }
 
 function displayIPList(data){
