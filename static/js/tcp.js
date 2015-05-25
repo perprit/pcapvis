@@ -4,7 +4,6 @@ $(function() {
         var spinner = $("<div class='spinner'> </div>");
         overlay.appendTo($("body"));
         spinner.appendTo($("body"));
-        console.log("appended");
 
         var form_data = new FormData($('#upload-file')[0]);
         $.ajax({
@@ -91,6 +90,8 @@ function drawBarChart(data){
 
     displayIPList(ip_list);
 
+    // main end
+
     // calculate sum of datalen for each bin
     function setData(ext){
       var ret = {freq:[], ip_list:{}};
@@ -157,16 +158,29 @@ function drawBarChart(data){
 
         brush_graph.x(xScale).extent(ext);
         brush_graph_g.call(brush_graph);
+
+        displayIPList(newData.ip_list);
     }
 }
 
 function displayIPList(data){
+    d3.select('#ip-list').text("");
+    console.log(data);
+
+    var ip_list = [];
     var obj_src = Object.keys(data);
     obj_src.forEach(function(src){
         var obj_dst = Object.keys(data[src]);
         obj_dst.forEach(function(dst){
-            d3.select('#ip-list-view').append("div")
-              .text(function(){return src+' '+dst+' '+data[src][dst];});
+            ip_list.push({src: src, dst: dst, datalen:data[src][dst]});            
         });
     });
+
+    ip_list.sort(function(a, b) { return b.datalen - a.datalen });
+
+    ip_list.forEach(function(ip) {
+        d3.select('#ip-list').append("div")
+          .text(function(){return ip.src+' '+ip.dst+' '+ip.datalen;});
+    });
+
 }
