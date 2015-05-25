@@ -27,6 +27,13 @@ $(function() {
             }
         });
     });
+
+    // bind enter key to ip-search
+    $(document).keypress(function(e) {
+        if (e.which == 13) {
+            $('#ip-search').click();
+        }
+    });
 });
 
 function drawBarChart(data){    
@@ -88,7 +95,8 @@ function drawBarChart(data){
     var brush_minimap_g = minimap.append('g');
     brush_minimap_g.call(brush_minimap).selectAll('rect').attr('height', height/6).style('opacity', 0.3);
 
-    displayIPList(ip_list);
+    // add PCAP data into list
+    updateIPList(ip_list);
 
     // main end
 
@@ -126,6 +134,7 @@ function drawBarChart(data){
     function minimap_brushend(){
         updateGraph();
     } 
+
     function updateGraph(){
         var ext = brush_graph.extent();
         if(Math.ceil((ext[1]-ext[0])/0.05)>400){
@@ -159,14 +168,11 @@ function drawBarChart(data){
         brush_graph.x(xScale).extent(ext);
         brush_graph_g.call(brush_graph);
 
-        displayIPList(newData.ip_list);
+        updateIPList(newData.ip_list);
     }
 }
 
-function displayIPList(data){
-    d3.select('#ip-list').text("");
-    console.log(data);
-
+function updateIPList(data){
     var ip_list = [];
     var obj_src = Object.keys(data);
     obj_src.forEach(function(src){
@@ -175,12 +181,40 @@ function displayIPList(data){
             ip_list.push({src: src, dst: dst, datalen:data[src][dst]});            
         });
     });
-
     ip_list.sort(function(a, b) { return b.datalen - a.datalen });
 
+    // TODO refresh whole ip-entry(remove-and-append)
+    // wanted to implement this with joins, 
+    // but cannot determine constant id for each [src][dst] ~ packet
+    var ip_list_view = d3.select("#ip-list").text("");
     ip_list.forEach(function(ip) {
-        d3.select('#ip-list').append("div")
-          .text(function(){return ip.src+' '+ip.dst+' '+ip.datalen;});
+        ip_list_view.append("p")
+            .classed("ip-entry", true)
+            .classed("unselectable", true)
+            .text(function(){ return ip.src+' '+ip.dst+' '+ip.datalen; });
     });
 
+    $('#ip-search').click(function() {
+        d3.select("#ip-list").text("");
+        var input = $('#ip-input')[0].value;
+        var new_ip_list = [];
+        ip_list.forEach(function(ip) {
+            if(ip.src.indexOf(input) > -1 || ip.dst.indexOf(input) > -1) {
+                new_ip_list.push(ip);
+            }
+        });
+        // add entry
+        new_ip_list.forEach(function(ip) {
+            ip_list_view.append("p")
+                .classed("ip-entry", true)
+                .classed("unselectable", true)
+                .text(function(){ return ip.src+' '+ip.dst+' '+ip.datalen; });
+        });
+        //var ip_entry = d3.select('#ip-list').selectAll('.ip-entry').data(new_ip_list);
+        //ip_entry.enter().append("p")
+            //.classed("ip-entry", true)
+            //.classed("unselectable", true)
+            //.text(function(ip){ return ip.src+' '+ip.dst+' '+ip.datalen; });     // TODO
+        //ip_entry.exit().remove();
+    });
 }
