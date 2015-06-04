@@ -174,11 +174,37 @@ function updateIPList(data){
     obj_src.forEach(function(src){
         var obj_dst = Object.keys(data[src]);
         obj_dst.forEach(function(dst){
-            ip_list.push({src: src, dst: dst, datalen:data[src][dst]});            
+            var parsed = {s_ip: [], s_port: 0, d_ip: [], d_port: 0, datalen: 0};
+            for(var i=0; i<4; i++) {
+                parsed.s_ip.push(src.split(":")[0].split(".")[i]);
+                parsed.d_ip.push(dst.split(":")[0].split(".")[i]);
+            }
+            parsed.s_port = src.split(":")[1];
+            parsed.d_port = dst.split(":")[1];
+            parsed.datalen = data[src][dst];
+            ip_list.push(parsed);
         });
     });
-    ip_list.sort(function(a, b) { return b.datalen - a.datalen });
+    var s_ip_nest = d3.nest()
+        .key(function(d) { return d.s_ip[0]; })
+        .key(function(d) { return d.s_ip[1]; })
+        .key(function(d) { return d.s_ip[2]; })
+        .key(function(d) { return d.s_ip[3]; })
+        .entries(ip_list);
+    var s_port_nest = d3.nest()
+        .key(function(d) { return d.s_port; })
+        .entries(ip_list);
+    var d_ip_nest = d3.nest()
+        .key(function(d) { return d.d_ip[0]; })
+        .key(function(d) { return d.d_ip[1]; })
+        .key(function(d) { return d.d_ip[2]; })
+        .key(function(d) { return d.d_ip[3]; })
+        .entries(ip_list);
+    var d_port_nest = d3.nest()
+        .key(function(d) { return d.d_port; })
+        .entries(ip_list);
 
+    ip_list.sort(function(a, b) { return b.datalen - a.datalen });
     var ip_list_view = d3.select("#ip-list");
     ip_list_view.text("");
     ip_list.forEach(function(ip) {
@@ -189,49 +215,49 @@ function updateIPList(data){
         var ip_info = ip_entry.append("span")
             .classed("ip-info", true);
 
-        var src = ip_info.append("span")
+        // src span
+        var src_span = ip_info.append("span")
             .classed("src", true);
 
-        var ip_src_split = ip.src.split(":")[0].split(".");
+        var ip_src_a = src_span.append("span").classed("groupable class-a", true);
+        ip_src_a.append("span").text(function(){ return ip.s_ip[0]; });
+        var ip_src_b = ip_src_a.append("span").classed("groupable class-b", true);
+        ip_src_b.append("span").text(function(){ return "."+ip.s_ip[1]; });
+        var ip_src_c = ip_src_b.append("span").classed("groupable class-c", true);
+        ip_src_c.append("span").text(function(){ return "."+ip.s_ip[2]; });
+        var ip_src_d = ip_src_c.append("span").classed("groupable class-d", true);
+        ip_src_d.append("span").text(function(){ return "."+ip.s_ip[3]; });
 
-        src.append("span")
-            .classed("A", true)
-            .text(function(){ return ip_src_split[0]; });
-        src.append("span")
-            .classed("B", true)
-            .text(function(){ return "."+ip_src_split[1]; });
-        src.append("span")
-            .classed("C", true)
-            .text(function(){ return "."+ip_src_split[2]; });
-        src.append("span")
-            .classed("D", true)
-            .text(function(){ return "."+ip_src_split[3]; });
-        src.append("span")
-            .classed("sport", true)
-            .text(function(){ return " : "+ip.src.split(":")[1]; });
+        src_span.append("span")
+            .text(function(){ return " : "; });
+        src_span.append("span")
+            .classed("groupable port", true)
+            .text(function(){ return ip.s_port; });
 
+        // right-arrow
         ip_info.append("i")
             .classed("into", true)
             .classed("glyphicon", true)
             .classed("glyphicon-arrow-right", true);
 
-        var dst = ip_info.append("span")
+        // dst span
+        var dst_span = ip_info.append("span")
             .classed("dst", true);
-        dst.append("span")
-            .classed("A", true)
-            .text(function(){ return ip.dst.split(":")[0].split(".")[0]; });
-        dst.append("span")
-            .classed("B", true)
-            .text(function(){ return "."+ip.dst.split(":")[0].split(".")[1]; });
-        dst.append("span")
-            .classed("C", true)
-            .text(function(){ return "."+ip.dst.split(":")[0].split(".")[2]; });
-        dst.append("span")
-            .classed("D", true)
-            .text(function(){ return "."+ip.dst.split(":")[0].split(".")[3]; });
-        dst.append("span")
-            .classed("sport", true)
-            .text(function(){ return " : "+ip.dst.split(":")[1]; });
+
+        var ip_dst_a = dst_span.append("span").classed("groupable class-a", true);
+        ip_dst_a.append("span").text(function(){ return ip.d_ip[0]; });
+        var ip_dst_b = ip_dst_a.append("span").classed("groupable class-b", true);
+        ip_dst_b.append("span").text(function(){ return "."+ip.d_ip[1]; });
+        var ip_dst_c = ip_dst_b.append("span").classed("groupable class-c", true);
+        ip_dst_c.append("span").text(function(){ return "."+ip.d_ip[2]; });
+        var ip_dst_d = ip_dst_c.append("span").classed("groupable class-d", true);
+        ip_dst_d.append("span").text(function(){ return "."+ip.d_ip[3]; });
+
+        dst_span.append("span")
+            .text(function(){ return ":"; });
+        dst_span.append("span")
+            .classed("groupable port", true)
+            .text(function(){ return ip.d_port; });
 
         ip_entry.append("span")
             .classed("value", true)
@@ -239,15 +265,15 @@ function updateIPList(data){
     });
 
 
-    var ip_input = $('#ip-input');
-    ip_input.keyup(function() {
-        var input = ip_input[0].value;
-        $("#ip-list > p").each(function() {
-            if($(this).text().search(input) > -1) {
-                $(this).show();
-            } else {
-                $(this).hide();
-            }
-        });
-    });
+    //var ip_input = $('#ip-input');
+    //ip_input.keyup(function() {
+        //var input = ip_input[0].value;
+        //$("#ip-list > p").each(function() {
+            //if($(this).text().search(input) > -1) {
+                //$(this).show();
+            //} else {
+                //$(this).hide();
+            //}
+        //});
+    //});
 }
