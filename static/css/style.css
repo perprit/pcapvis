@@ -42,23 +42,21 @@
 }
 
 #ip-list-header {
-    margin: 4px;
+    margin: 2px;
     background-color: LightGray;
 }
 #ip-list-header .src {
     display: inline-block;
-    width: 150px;
-    margin-left: 5px;
+    width: 45%;
 }
 #ip-list-header .dst {
     display: inline-block;
-    width: 100px;
-    margin-left: 55px;
+    width: 35%;
 }
 #ip-list-header .value {
-    margin-left: 70px;
+    float:right;
     display: inline-block;
-    width: 50px;
+    width: 15%;
 }
 
 .ip-info {
@@ -79,19 +77,19 @@
 
 .ip-entry .src {
     display: inline-block;
-    width: 150px;
-    margin-right: 20px;
+    width: 32%;
+    margin-right: 30px;
 }
 
 .ip-entry .into {
     display: inline-block;
-    width: 20px;
-    margin-right: 20px;
+    width: 5%;
+    margin-right: 10px;
 }
 
 .ip-entry .dst {
     display: inline-block;
-    width: 150px;
+    width: 30%;
 }
 
 .ip-entry .value {

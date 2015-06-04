@@ -229,7 +229,7 @@ function updateIPList(data){
         ip_src_d.append("span").text(function(){ return "."+ip.s_ip[3]; });
 
         src_span.append("span")
-            .text(function(){ return " : "; });
+            .text(function(){ return ":"; });
         src_span.append("span")
             .classed("groupable port", true)
             .text(function(){ return ip.s_port; });
