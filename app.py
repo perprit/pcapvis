@@ -1,4 +1,5 @@
 import os
+import math, json
 from flask import Flask, request, redirect, url_for, send_from_directory, render_template, jsonify
 from werkzeug import secure_filename
 from pcap_parser import pcap_to_json 
@@ -8,6 +9,7 @@ ALLOWED_EXTENSIONS = set(['pcap'])
 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+tcp_json_loads = {}
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1] in ALLOWED_EXTENSIONS
@@ -23,6 +25,7 @@ def index():
 
 @app.route('/upload', methods=['GET', 'POST'])
 def upload_pcap():
+    global tcp_json_loads
     if request.method == 'POST':
         fp = request.files['file']
         # if UPLOAD_FOLDER directory does not exist, create it
@@ -34,8 +37,38 @@ def upload_pcap():
             fp.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
             with open(os.path.join(app.config['UPLOAD_FOLDER'], filename), 'rb') as fp:
                 tcp_json = pcap_to_json(fp)
+                tcp_json_loads = json.loads(tcp_json)
             return tcp_json
     return None
+
+@app.route('/setData', methods=['POST'])
+def setData():
+    global tcp_json_loads
+
+    if request.method == 'POST' and bool(tcp_json_loads):
+        req = request.get_json()
+        ext = req['ext']
+        extent_initial = req['extent_initial']
+        binNum = req['binNum']
+        binSize = req['binSize']
+
+        ret = {'freq': [0]*binNum, 'ip_list': {}}
+        insiders = [d for d in tcp_json_loads if not(d["ts"] - extent_initial[0] > ext[1] or d["ts"] - extent_initial[0] < ext[0])]
+        for d in insiders:
+            idx = int(math.floor((d["ts"]-extent_initial[0]-ext[0])/binSize))
+            if idx == binNum:
+                idx-=1
+            ret['freq'][idx] += d['datalen']
+            src = str(d['src'])+":"+str(d['sport'])
+            dst = str(d['dst'])+":"+str(d['dport'])
+            if not src in ret['ip_list']:
+                ret['ip_list'][src] = {}
+            if not dst in ret['ip_list'][src]:
+                ret['ip_list'][src][dst] = 0
+            ret['ip_list'][src][dst] += d['datalen']
+        return json.dumps(ret)
+    return
+
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=12321)

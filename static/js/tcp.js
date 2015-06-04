@@ -40,7 +40,7 @@ function drawBarChart(data){
       binNum = 400;
     }
 
-    var initialData = setData(extent);
+    var initialData = setData(extent, extent_initial, binNum, bin);
     var freq = initialData.freq;
     var ip_list = initialData.ip_list;
     var margin = {top: 20, right: 20, bottom: 30, left: 60};
@@ -67,7 +67,6 @@ function drawBarChart(data){
         .attr('height', function(k) { return height - yScale(k); })
 	      .attr('transform', function(k, i){return 'translate('+xScale(i*bin) +',' +yScale(k)+')';});
 
-    console.log(graph_bars);
     var minimap = d3.select('#graph-minimap').append('svg')
         .attr('width', width+margin.left+margin.right)
         .attr('height', height/2)
@@ -94,22 +93,25 @@ function drawBarChart(data){
     // main end
 
     // calculate sum of datalen for each bin
-    function setData(ext){
-      var ret = {freq:[], ip_list:{}};
-      for(var i=0;i<binNum;i++) ret.freq[i]=0;
-      data.forEach(function(d){
-          if(d.ts-extent_initial[0]>ext[1]||d.ts-extent_initial[0]<ext[0]) return;
-          console.log("..");
-          var idx = Math.floor((d.ts-extent_initial[0]-ext[0])/bin);
-          if(idx == binNum) idx--;
-          ret.freq[idx]+=d.datalen;
-          var src = d.src+':'+d.sport;
-          var dst = d.dst+':'+d.dport;
-          if(ret.ip_list[src] == undefined) ret.ip_list[src]={};
-          if(ret.ip_list[src][dst] == undefined) ret.ip_list[src][dst]=0;
-          ret.ip_list[src][dst]+=d.datalen;  
-      });
-      return ret;
+    function setData(_ext, _extent_initial, _binNum, _bin){
+        var response;
+        $.ajax({
+            type: 'POST',
+            url: '/setData',
+            data: JSON.stringify({ext: _ext, extent_initial: _extent_initial, binNum: _binNum, binSize: _bin}),
+            dataType: 'json',
+            contentType: 'application/json',
+            async: false,
+            success: function(data) {
+                response = data;
+            },
+            error: function(jqXHR, textStatus, errorThrown) {
+                alert(textStatus + ", " + errorThrown);
+            },
+            complete: function() {
+            }
+        });
+        return response;
     }
 
     // brush functions
@@ -123,6 +125,7 @@ function drawBarChart(data){
     function minimap_brush(){
         brush_graph.extent(brush_minimap.extent());
         brush_graph_g.call(brush_graph);
+        updateGraph();
     }
     function minimap_brushend(){
         updateGraph();
@@ -138,7 +141,7 @@ function drawBarChart(data){
             bin=0.05;
             binNum = Math.ceil((ext[1]-ext[0])/0.05);
         }
-        var newData = setData(ext);
+        var newData = setData(ext, extent_initial, binNum, bin);
         xScale.domain([ext[0], ext[1]]);
         yScale.domain([0, d3.max(newData.freq, function(k){return +k;})]); 
 

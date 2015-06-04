@@ -22,15 +22,19 @@
 }
 
 .ip-entry {
-    margin: 2px;
+    border-style: solid;
+    border-width: 2px;
+    border-color: white;
+    padding: 2px;
+    margin: 0px;
 }
 
 .ip-entry:hover{
     border-style: solid;
     border-width: 2px;
     border-color: steelblue;
-    margin-top: -2px;
-    margin-bottom: -2px;
+    padding: 2px;
+    margin: 0px;
 }
 
 .btn-file {
