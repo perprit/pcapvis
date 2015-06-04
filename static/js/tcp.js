@@ -179,16 +179,63 @@ function updateIPList(data){
     });
     ip_list.sort(function(a, b) { return b.datalen - a.datalen });
 
-    // TODO refresh whole ip-entry(remove-and-append)
-    // wanted to implement this with joins, 
-    // but cannot determine constant id for each [src][dst] ~ packet
     var ip_list_view = d3.select("#ip-list");
     ip_list_view.text("");
     ip_list.forEach(function(ip) {
-        ip_list_view.append("p")
+        var ip_entry = ip_list_view.append("li")
             .classed("ip-entry", true)
-            .classed("unselectable", true)
-            .text(function(){ return ip.src+' '+ip.dst+' '+ip.datalen; });
+            .classed("unselectable", true);
+
+        var ip_info = ip_entry.append("span")
+            .classed("ip-info", true);
+
+        var src = ip_info.append("span")
+            .classed("src", true);
+
+        var ip_src_split = ip.src.split(":")[0].split(".");
+
+        src.append("span")
+            .classed("A", true)
+            .text(function(){ return ip_src_split[0]; });
+        src.append("span")
+            .classed("B", true)
+            .text(function(){ return "."+ip_src_split[1]; });
+        src.append("span")
+            .classed("C", true)
+            .text(function(){ return "."+ip_src_split[2]; });
+        src.append("span")
+            .classed("D", true)
+            .text(function(){ return "."+ip_src_split[3]; });
+        src.append("span")
+            .classed("sport", true)
+            .text(function(){ return " : "+ip.src.split(":")[1]; });
+
+        ip_info.append("i")
+            .classed("into", true)
+            .classed("glyphicon", true)
+            .classed("glyphicon-arrow-right", true);
+
+        var dst = ip_info.append("span")
+            .classed("dst", true);
+        dst.append("span")
+            .classed("A", true)
+            .text(function(){ return ip.dst.split(":")[0].split(".")[0]; });
+        dst.append("span")
+            .classed("B", true)
+            .text(function(){ return "."+ip.dst.split(":")[0].split(".")[1]; });
+        dst.append("span")
+            .classed("C", true)
+            .text(function(){ return "."+ip.dst.split(":")[0].split(".")[2]; });
+        dst.append("span")
+            .classed("D", true)
+            .text(function(){ return "."+ip.dst.split(":")[0].split(".")[3]; });
+        dst.append("span")
+            .classed("sport", true)
+            .text(function(){ return " : "+ip.dst.split(":")[1]; });
+
+        ip_entry.append("span")
+            .classed("value", true)
+            .text(function(){ return ip.datalen; });
     });
 
 
@@ -202,11 +249,5 @@ function updateIPList(data){
                 $(this).hide();
             }
         });
-        //var ip_entry = d3.select('#ip-list').selectAll('.ip-entry').data(new_ip_list);
-        //ip_entry.enter().append("p")
-            //.classed("ip-entry", true)
-            //.classed("unselectable", true)
-            //.text(function(ip){ return ip.src+' '+ip.dst+' '+ip.datalen; });     // TODO
-        //ip_entry.exit().remove();
     });
 }
