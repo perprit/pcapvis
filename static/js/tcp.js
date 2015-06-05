@@ -16,6 +16,8 @@ $(function() {
             async: true,
             success: function(data) {
                 d = JSON.parse(data);
+                $('#graph-view svg').remove()
+                $('#graph-minimap svg').remove()
                 drawBarChart(d);
             },
             error: function(jqXHR, textStatus, errorThrown) {
