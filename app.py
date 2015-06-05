@@ -72,10 +72,10 @@ def setData():
         if 'filter_ext' in req.keys():
             filter_ext = req['filter_ext']
             if filter_ext[0] == u'' and filter_ext[1] == u'':
-                filter_ext = [min(ret['freq']), max(ret['freq'])]
+                pass
             else:
                 filter_ext = [float(f) for f in req['filter_ext']]
-            ret['freq'] = [f if f >= filter_ext[0] and f <= filter_ext[1] else 0 for f in ret['freq']]
+                ret['freq'] = [f if f >= filter_ext[0] and f <= filter_ext[1] else 0 for f in ret['freq']]
         return json.dumps(ret)
     return
 
