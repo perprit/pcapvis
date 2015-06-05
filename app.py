@@ -47,8 +47,11 @@ def setData():
 
     if request.method == 'POST' and bool(tcp_json_loads):
         req = request.get_json()
-        ext = req['ext']
         extent_initial = req['extent_initial']
+        if 'ext' in req.keys():
+            ext = req['ext']
+        else:
+            ext = extent_initial
         binNum = req['binNum']
         binSize = req['binSize']
 
@@ -66,6 +69,13 @@ def setData():
             if not dst in ret['ip_list'][src]:
                 ret['ip_list'][src][dst] = 0
             ret['ip_list'][src][dst] += d['datalen']
+        if 'filter_ext' in req.keys():
+            filter_ext = req['filter_ext']
+            if filter_ext[0] == u'' and filter_ext[1] == u'':
+                filter_ext = [min(ret['freq']), max(ret['freq'])]
+            else:
+                filter_ext = [float(f) for f in req['filter_ext']]
+            ret['freq'] = [f if f >= filter_ext[0] and f <= filter_ext[1] else 0 for f in ret['freq']]
         return json.dumps(ret)
     return
 

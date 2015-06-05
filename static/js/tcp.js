@@ -89,18 +89,20 @@ function drawBarChart(data){
     var brush_minimap_g = minimap.append('g');
     brush_minimap_g.call(brush_minimap).selectAll('rect').attr('height', height/6).style('opacity', 0.3);
 
+    updateFilter(freq);
+
     // add PCAP data into list
     updateIPList(ip_list);
 
     // main end
 
     // calculate sum of datalen for each bin
-    function setData(_ext, _extent_initial, _binNum, _bin){
+    function setData(_ext, _extent_initial, _binNum, _bin, _filter_ext){
         var response;
         $.ajax({
             type: 'POST',
             url: '/setData',
-            data: JSON.stringify({ext: _ext, extent_initial: _extent_initial, binNum: _binNum, binSize: _bin}),
+            data: JSON.stringify({ext: _ext, extent_initial: _extent_initial, binNum: _binNum, binSize: _bin, filter_ext: _filter_ext}),
             dataType: 'json',
             contentType: 'application/json',
             async: false,
@@ -131,10 +133,33 @@ function drawBarChart(data){
     }
     function minimap_brushend(){
         updateGraph();
-    } 
+    }
+
+    function updateFilter(data){
+        $('#bandwidth-filter #slider').text('');
+        $('#bandwidth-filter #slider-textmin').text('');
+        $('#bandwidth-filter #slider-textmax').text('');
+        $('#bandwidth-filter #slider-type').text('');
+        d3.select('#bandwidth-filter #slider-type').text('Bandwidth filter');
+        d3.select('#bandwidth-filter #slider')
+            .call(d3.slider()
+                .axis(true)
+                .min(0)
+                .max(d3.max(data) - d3.min(data))
+                .value([0, d3.max(data) - d3.min(data)])
+                .on('slide', function(evt, value){
+                    d3.select('#bandwidth-filter #slider-textmin').text(value[0]);
+                    d3.select('#bandwidth-filter #slider-textmax').text(value[1]);
+                    updateGraph();
+                }));
+    }
 
     function updateGraph(){
         var ext = brush_graph.extent();
+        if(ext[0] == 0 && ext[1] == 0){
+            ext = extent;
+        }
+        console.log(ext);
         if(Math.ceil((ext[1]-ext[0])/0.05)>400){
             bin = (ext[1]-ext[0])/400;
             binNum = 400;
@@ -143,7 +168,8 @@ function drawBarChart(data){
             bin=0.05;
             binNum = Math.ceil((ext[1]-ext[0])/0.05);
         }
-        var newData = setData(ext, extent_initial, binNum, bin);
+        var filter_ext = [d3.select('#bandwidth-filter #slider-textmin').text(), d3.select('#bandwidth-filter #slider-textmax').text()]
+        var newData = setData(ext, extent_initial, binNum, bin, filter_ext);
         xScale.domain([ext[0], ext[1]]);
         yScale.domain([0, d3.max(newData.freq, function(k){return +k;})]); 
 
