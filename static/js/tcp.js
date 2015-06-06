@@ -52,6 +52,10 @@ function drawBarChart(data){
     var xScale_init = d3.scale.linear().range([0, width-margin.left-margin.right]).domain([extent[0], extent[1]]);
     var yScale = d3.scale.linear().range([height, 0]).domain([0, d3.max(freq, function (k){return +k;})]);
     
+    var yScale_controlScale = d3.scale.linear().range([height, 0]).domain([0, d3.max(freq, function(k){return +k;})]).clamp(true);
+    var yScale_controlAxis = d3.svg.axis().scale(yScale_controlScale).orient('left');
+    var yScale_controlBrush = d3.svg.brush().y(yScale_controlScale).extent([0, 0]).on('brushend', yScale_controlBrushend).on('brush', yScale_controlBrush);
+
     var xAxis = d3.svg.axis().scale(xScale).orient('bottom');
     var yAxis = d3.svg.axis().scale(yScale).orient('left');
 
@@ -62,6 +66,15 @@ function drawBarChart(data){
   
     var graph_xAxis = graph.append('g').attr('class', 'x axis').attr("transform", "translate(0," + height + ")").call(xAxis);
     var graph_yAxis = graph.append('g').attr('class', 'y axis').call(yAxis);
+    var graph_yControl = graph.append('g').attr('class', 'y axis').attr('transform', 'translate('+width+')').call(yScale_controlAxis);
+    var graph_yControlBrush = graph.append('g').attr('transform', 'translate('+width+')').call(yScale_controlBrush);
+    graph_yControlBrush.selectAll('.extent,.resize').remove();
+    //graph_yControlBrush.selectAll('rect').attr('width', 40) ;
+    var graph_yControlSlider = graph_yControlBrush.append('circle').attr('r', 10);
+    graph_yControlBrush.call(yScale_controlBrush.extent([0, 0]));
+    graph_yControlBrush.selectAll('.resize rect').attr('width', 9).attr('height', 9);
+    //.attr('transform', 'translate('+0+','+height/2+')');
+
     var graph_bars = graph.append('g');
     graph_bars.selectAll('.bar').data(freq).enter().append('rect')
         .attr('class', 'bar')
@@ -117,7 +130,6 @@ function drawBarChart(data){
         });
         return response;
     }
-
     // brush functions
     function graph_brush(){
         brush_minimap.extent(brush_graph.extent());
@@ -159,7 +171,6 @@ function drawBarChart(data){
         if(ext[0] == 0 && ext[1] == 0){
             ext = extent;
         }
-        console.log(ext);
         if(Math.ceil((ext[1]-ext[0])/0.05)>400){
             bin = (ext[1]-ext[0])/400;
             binNum = 400;
@@ -171,10 +182,10 @@ function drawBarChart(data){
         var filter_ext = [d3.select('#bandwidth-filter #slider-textmin').text(), d3.select('#bandwidth-filter #slider-textmax').text()]
         var newData = setData(ext, extent_initial, binNum, bin, filter_ext);
         xScale.domain([ext[0], ext[1]]);
-        yScale.domain([0, d3.max(newData.freq, function(k){return +k;})]); 
+        //yScale.domain([0, d3.max(newData.freq, function(k){return +k;})]); 
 
         var new_graph_bars = graph_bars.selectAll('.bar').data(newData.freq);
-        
+         
         new_graph_bars
             .attr('class', 'bar')
             .attr('width', width/binNum)
@@ -182,17 +193,40 @@ function drawBarChart(data){
             .attr('transform', function(k, i){return 'translate('+xScale(i*bin+ext[0])+','+yScale(k)+')';})
             .style('visibility', 'visible');
        
-
         new_graph_bars.exit().style('visibility', 'hidden');    
+       
         xAxis.scale(xScale);
-        yAxis.scale(yScale);
+        //yAxis.scale(yScale);
         graph_xAxis.call(xAxis);
-        graph_yAxis.call(yAxis);
+        //graph_yAxis.call(yAxis);
 
         brush_graph.x(xScale).extent(ext);
         brush_graph_g.call(brush_graph);
 
         updateIPList(newData.ip_list);
+    }
+    function yScale_controlBrush(){
+      var value = yScale_controlBrush.extent()[0]; 
+      if (d3.event.sourceEvent) {
+           //value = yScale_controlScale.invert(d3.mouse(this)[0]);
+           //yScale_controlBrush.extent([value, value]);
+      }
+      
+      //yScale_controlBrush.extent([value, value]);
+      graph_yControlSlider.attr('cy',yScale_controlScale(value));  
+    }
+    function yScale_controlBrushend(){
+      var ext = brush_graph.extent();
+      yScale.domain([0, yScale_controlBrush.extent()[0]]); 
+      graph_bars.selectAll('.bar')
+        .attr('width', width/binNum)
+        .attr('height', function(k){return height-yScale(k);})
+        .attr('transform', function(k, i){return 'translate('+xScale(i*bin+ext[0])+','+yScale(k)+')';})
+        .style('visibility', 'visible')
+        .style('fill', function(k){if (yScale(k)<0) return 'red';else return 'steelblue';});
+      yAxis.scale(yScale);
+      graph_yAxis.call(yAxis);    
+
     }
 }
 
