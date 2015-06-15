@@ -43,7 +43,9 @@ def upload_pcap():
                 for p in tcp_json_loads:
                     src = str(p['src'])+":"+str(p['sport'])
                     dst = str(p['dst'])+":"+str(p['dport'])
-                    ip_as_key[src + ',' + dst].append(p['ts'])
+                    sd = [src, dst]
+                    sd.sort()
+                    ip_as_key[sd[0] + ',' + sd[1]].append([p['ts'], p['flags']])
             return tcp_json
     return None
 
@@ -88,11 +90,27 @@ def setData():
 
 def calLatency(ts, ip_key):
     global ip_as_key
-    tss = [t for t in ip_as_key[ip_key] if t > ts]
-    if tss == []:
-        return 0
+    tss = [t for t in ip_as_key[ip_key] if t[0] >= ts]
+    if tss[0][1]['SYN'] == True and tss[0][1]['ACK'] == False:
+        _tss = [t for t in tss if t[1]['SYN'] == True and t[1]['ACK'] == True]
+        if _tss == []:
+            return 0
+        else:
+            return _tss[0][0] - tss[0][0]
+    elif tss[0][1]['SYN'] == True and tss[0][1]['ACK'] == True:
+        _tss = [t for t in tss if t[1]['SYN'] == True and t[1]['ACK'] == False]
+        if _tss == []:
+            return 0
+        else:
+            return _tss[0][0] - tss[0][0]
+    elif tss[0][1]['FIN'] == True:
+        _tss = [t for t in tss if t[1]['ACK'] == True]
+        if _tss == []:
+            return 0
+        else:
+            return _tss[0][0] - tss[0][0]
     else:
-        return tss[0] - ts
+        return 0
 
 
 # returns setData style json representing Latency
@@ -100,7 +118,6 @@ def calLatency(ts, ip_key):
 @app.route('/setLatency', methods=['POST'])
 def setLatency():
     global tcp_json_loads
-    global ip_as_key
 
     if request.method == 'POST' and bool(tcp_json_loads):
         req = request.get_json()
@@ -118,7 +135,9 @@ def setLatency():
                 idx -= 1
             src = str(d['src'])+":"+str(d['sport'])
             dst = str(d['dst'])+":"+str(d['dport'])
-            lat = calLatency(d['ts'], src + ',' + dst)
+            sd = [src, dst]
+            sd.sort()
+            lat = calLatency(d['ts'], sd[0] + ',' + sd[1])
             ret['latency'][idx] += lat
 
             if not src in ret['ip_list']:
