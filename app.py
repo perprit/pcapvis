@@ -1,5 +1,5 @@
-import os
-import math, json
+import os, math, json
+from collections import defaultdict
 from flask import Flask, request, redirect, url_for, send_from_directory, render_template, jsonify
 from werkzeug import secure_filename
 from pcap_parser import pcap_to_json 
@@ -26,6 +26,7 @@ def index():
 @app.route('/upload', methods=['GET', 'POST'])
 def upload_pcap():
     global tcp_json_loads
+    global ip_as_key
     if request.method == 'POST':
         fp = request.files['file']
         # if UPLOAD_FOLDER directory does not exist, create it
@@ -38,8 +39,14 @@ def upload_pcap():
             with open(os.path.join(app.config['UPLOAD_FOLDER'], filename), 'rb') as fp:
                 tcp_json = pcap_to_json(fp)
                 tcp_json_loads = json.loads(tcp_json)
+                ip_as_key = defaultdict(list)
+                for p in tcp_json_loads:
+                    src = str(p['src'])+":"+str(p['sport'])
+                    dst = str(p['dst'])+":"+str(p['dport'])
+                    ip_as_key[src + ',' + dst].append(p['ts'])
             return tcp_json
     return None
+
 
 @app.route('/setData', methods=['POST'])
 def setData():
@@ -48,22 +55,21 @@ def setData():
     if request.method == 'POST' and bool(tcp_json_loads):
         req = request.get_json()
         extent_initial = req['extent_initial']
-        if 'ext' in req.keys():
-            ext = req['ext']
-        else:
-            ext = extent_initial
+        ext = req['ext'] if 'ext' in req.keys() else extent_initial
         binNum = req['binNum']
         binSize = req['binSize']
 
-        ret = {'freq': [0]*binNum, 'ip_list': {}}
+        ret = {'freq': [0 for _ in xrange(binNum)], 'ip_list': {}}
         insiders = [d for d in tcp_json_loads if not(d["ts"] - extent_initial[0] > ext[1] or d["ts"] - extent_initial[0] < ext[0])]
         for d in insiders:
             idx = int(math.floor((d["ts"]-extent_initial[0]-ext[0])/binSize))
             if idx == binNum:
                 idx-=1
             ret['freq'][idx] += d['datalen']
+            
             src = str(d['src'])+":"+str(d['sport'])
             dst = str(d['dst'])+":"+str(d['dport'])
+
             if not src in ret['ip_list']:
                 ret['ip_list'][src] = {}
             if not dst in ret['ip_list'][src]:
@@ -78,6 +84,59 @@ def setData():
                 ret['freq'] = [f if f >= filter_ext[0] and f <= filter_ext[1] else 0 for f in ret['freq']]
         return json.dumps(ret)
     return
+
+
+def calLatency(ts, ip_key):
+    global ip_as_key
+    tss = [t for t in ip_as_key[ip_key] if t > ts]
+    if tss == []:
+        return 0
+    else:
+        return tss[0] - ts
+
+
+# returns setData style json representing Latency
+# unit : second
+@app.route('/setLatency', methods=['POST'])
+def setLatency():
+    global tcp_json_loads
+    global ip_as_key
+
+    if request.method == 'POST' and bool(tcp_json_loads):
+        req = request.get_json()
+        extent_initial = req['extent_initial']
+        ext = req['ext'] if 'ext' in req.keys() else extent_initial
+        binNum = req['binNum']
+        binSize = req['binSize']
+
+        ret = {'latency': [0 for _ in xrange(binNum)], 'ip_list': {}}
+        insiders = [d for d in tcp_json_loads if not(d["ts"] - extent_initial[0] > ext[1] or d["ts"] - extent_initial[0] < ext[0])]
+
+        for d in insiders:
+            idx = int(math.floor((d['ts']-extent_initial[0]-ext[0])/binSize))
+            if idx == binNum:
+                idx -= 1
+            src = str(d['src'])+":"+str(d['sport'])
+            dst = str(d['dst'])+":"+str(d['dport'])
+            lat = calLatency(d['ts'], src + ',' + dst)
+            ret['latency'][idx] += lat
+
+            if not src in ret['ip_list']:
+                ret['ip_list'][src] = {}
+            if not dst in ret['ip_list'][src]:
+                ret['ip_list'][src][dst] = 0
+            ret['ip_list'][src][dst] += lat
+        if 'filter_ext' in req.keys():
+            filter_ext = req['filter_ext']
+            if filter_ext[0] == u'' and filter_ext[1] == u'':
+                pass
+            else:
+                filter_ext = [float(f) for f in req['filter_ext']]
+                ret['latency'] = [f if f >= filter_ext[0] and f <= filter_ext[1] else 0 for f in ret['latency']]
+        return json.dumps(ret)
+    return
+
+
 
 
 if __name__ == '__main__':

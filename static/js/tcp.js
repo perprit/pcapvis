@@ -43,6 +43,8 @@ function drawBarChart(data){
     }
 
     var initialData = setData(extent, extent_initial, binNum, bin);
+    var latencyData = setLatency(extent, extent_initial, binNum, bin);
+    console.log(latencyData);
     var freq = initialData.freq;
     var ip_list = initialData.ip_list;
     var margin = {top: 20, right: 20, bottom: 30, left: 60};
@@ -130,6 +132,29 @@ function drawBarChart(data){
         });
         return response;
     }
+
+    // calculate latency for each bin
+    function setLatency(_ext, _extent_initial, _binNum, _bin, _filter_ext){
+        var response;
+        $.ajax({
+            type: 'POST',
+            url: '/setLatency',
+            data: JSON.stringify({ext: _ext, extent_initial: _extent_initial, binNum: _binNum, binSize: _bin, filter_ext: _filter_ext}),
+            dataType: 'json',
+            contentType: 'application/json',
+            async: false,
+            success: function(data) {
+                response = data;
+            },
+            error: function(jqXHR, textStatus, errorThrown) {
+                alert(textStatus + ", " + errorThrown);
+            },
+            complete: function() {
+            }
+        });
+        return response;
+    }
+
     // brush functions
     function graph_brush(){
         brush_minimap.extent(brush_graph.extent());
