@@ -31,8 +31,9 @@ $(function() {
     });
 });
 
-function drawBarChart(data){    
-    // main
+function drawBarChart(data){   
+    var isLatency = false; //false: freq true: latency
+    
     var bin = 0.05;
     var extent_initial = d3.extent(data, function(d){ return d.ts; });
     var extent = [0, extent_initial[1]-extent_initial[0]];
@@ -41,53 +42,87 @@ function drawBarChart(data){
       bin = (extent[1]-extent[0])/400;
       binNum = 400;
     }
+    var bin_l = bin;
+    var binNum_l = binNum;
 
     var initialData = setData(extent, extent_initial, binNum, bin);
-    var latencyData = setLatency(extent, extent_initial, binNum, bin);
-    console.log(latencyData);
+    var initialLatency = setLatency(extent, extent_initial, binNum, bin);
+    console.log(initialLatency);
     var freq = initialData.freq;
     var ip_list = initialData.ip_list;
+    
+    var latency = initialLatency.latency;
+    var ip_list_l = initialLatency.ip_list;
+
     var margin = {top: 20, right: 20, bottom: 30, left: 60};
     var width = $('#graph-view').width()-margin.left-margin.right;
+    var right_width = 100;
     var height = 450 - margin.top - margin.bottom;
-    var xScale = d3.scale.linear().range([0, width-margin.left-margin.right]).domain([extent[0], extent[1]]).clamp(true);
-    var xScale_init = d3.scale.linear().range([0, width-margin.left-margin.right]).domain([extent[0], extent[1]]);
+    
+    var xScale = d3.scale.linear().range([0, width-margin.left-margin.right-right_width]).domain([extent[0], extent[1]]).clamp(true);
+    var xScale_init = d3.scale.linear().range([0, width-margin.left-margin.right-right_width]).domain([extent[0], extent[1]]);
     var yScale = d3.scale.linear().range([height, 0]).domain([0, d3.max(freq, function (k){return +k;})]);
     
     var yScale_controlScale = d3.scale.linear().range([height, 0]).domain([0, d3.max(freq, function(k){return +k;})]).clamp(true);
     var yScale_controlAxis = d3.svg.axis().scale(yScale_controlScale).orient('left');
-    var yScale_controlBrush = d3.svg.brush().y(yScale_controlScale).extent([0, 0]).on('brushend', yScale_controlBrushend).on('brush', yScale_controlBrush);
+    var yScale_controlBrush = d3.svg.brush().y(yScale_controlScale).extent([0, 0]).on('brush', yScale_controlBrushfunction);
+
+    var xScale_l = d3.scale.linear().range([0, width-margin.left-margin.right-right_width]).domain([extent[0], extent[1]]).clamp(true);
+    var xScale_l_init = d3.scale.linear().range([0, width-margin.left-margin.right-right_width]).domain([extent[0], extent[1]]);
+    var yScale_l = d3.scale.linear().range([height, 0]).domain([0, d3.max(latency, function(k){return +k;})]);
+
+    var yScale_controlScale_l = d3.scale.linear().range([height, 0]).domain([0, d3.max(latency, function(k){return +k;})]).clamp(true);
+    var yScale_controlAxis_l = d3.svg.axis().scale(yScale_controlScale_l).orient('left');
+    var yScale_controlBrush_l = d3.svg.brush().y(yScale_controlScale_l).extent([0, 0]).on('brush', yScale_controlBrushfunction);
 
     var xAxis = d3.svg.axis().scale(xScale).orient('bottom');
     var yAxis = d3.svg.axis().scale(yScale).orient('left');
 
-    var graph = d3.select('#graph-view').append('svg')
+    var xAxis_l = d3.svg.axis().scale(xScale_l).orient('bottom');
+    var yAxis_l = d3.svg.axis().scale(yScale_l).orient('left');
+
+    var graph_svg = d3.select('#graph-view').append('svg')
         .attr('width', width + margin.left + margin.right)
-        .attr('height', height + margin.top + margin.bottom)
-        .append('g').attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+        .attr('height', height + margin.top + margin.bottom);  
+    var graph = graph_svg.append('g').attr("transform", "translate(" + margin.left + "," + margin.top + ")");
   
+    var graph_l_svg = d3.select('#graph-view').append('svg')
+        .attr('width', width+margin.left+margin.right)
+        .attr('height', height + margin.top + margin.bottom);
+    var graph_l = graph_l_svg.append('g').attr('transform', 'translate('+margin.left+','+margin.top+')');
+        
     var graph_xAxis = graph.append('g').attr('class', 'x axis').attr("transform", "translate(0," + height + ")").call(xAxis);
     var graph_yAxis = graph.append('g').attr('class', 'y axis').call(yAxis);
     var graph_yControl = graph.append('g').attr('class', 'y axis').attr('transform', 'translate('+width+')').call(yScale_controlAxis);
     var graph_yControlBrush = graph.append('g').attr('transform', 'translate('+width+')').call(yScale_controlBrush);
     graph_yControlBrush.selectAll('.extent,.resize').remove();
-    //graph_yControlBrush.selectAll('rect').attr('width', 40) ;
+    
     var graph_yControlSlider = graph_yControlBrush.append('circle').attr('r', 10);
     graph_yControlBrush.call(yScale_controlBrush.extent([0, 0]));
-    graph_yControlBrush.selectAll('.resize rect').attr('width', 9).attr('height', 9);
-    //.attr('transform', 'translate('+0+','+height/2+')');
+    graph_yControlBrush.selectAll('.resize rect').attr('width', 20).attr('height', 20).attr('transform', 'translate(-10, -10)');
+
+
+    var graph_xAxis_l = graph_l.append('g').attr('class', 'x axis').attr("transform", "translate(0," + height + ")").call(xAxis_l);
+    var graph_yAxis_l = graph_l.append('g').attr('class', 'y axis').call(yAxis_l);
+    var graph_yControl_l = graph_l.append('g').attr('class', 'y axis').attr('transform', 'translate('+width+')').call(yScale_controlAxis_l);
+    var graph_yControlBrush_l = graph_l.append('g').attr('transform', 'translate('+width+')').call(yScale_controlBrush_l);
+    graph_yControlBrush_l.selectAll('.extent,.resize').remove();
+     
+    var graph_yControlSlider_l = graph_yControlBrush_l.append('circle').attr('r', 10);
+    graph_yControlBrush_l.call(yScale_controlBrush_l.extent([0, 0]));
+    graph_yControlBrush_l.selectAll('.resize rect').attr('width', 20).attr('height', 20).attr('transform', 'translate(-10, -10)');
 
     var graph_bars = graph.append('g');
     graph_bars.selectAll('.bar').data(freq).enter().append('rect')
         .attr('class', 'bar')
-        .attr('width', width/binNum)
+        .attr('width', (width-right_width)/binNum)
         .attr('height', function(k) { return height - yScale(k); })
 	      .attr('transform', function(k, i){return 'translate('+xScale(i*bin) +',' +yScale(k)+')';});
 
-    var minimap = d3.select('#graph-minimap').append('svg')
+    var minimap_svg = d3.select('#graph-minimap').append('svg')
         .attr('width', width+margin.left+margin.right)
-        .attr('height', height/2)
-        .append('g').attr('transform', 'translate('+margin.left+','+margin.top+')');
+        .attr('height', height/4)
+    var minimap= minimap_svg.append('g').attr('transform', 'translate('+margin.left+','+margin.top+')');
 
     minimap.selectAll(".nothing")
         .data(freq).enter()
@@ -104,10 +139,58 @@ function drawBarChart(data){
     var brush_minimap_g = minimap.append('g');
     brush_minimap_g.call(brush_minimap).selectAll('rect').attr('height', height/6).style('opacity', 0.3);
 
-    updateFilter(freq);
 
-    // add PCAP data into list
+    var graph_bars_l = graph_l.append('g');
+    graph_bars_l.selectAll('.bar').data(latency).enter().append('rect')
+        .attr('class', 'bar')
+        .attr('width', (width-right_width)/binNum)
+        .attr('height', function(k) { return height - yScale_l(k);  })
+        .attr('transform', function(k, i){return 'translate('+xScale_l(i*bin_l) +',' +yScale_l(k)+')';});
+
+    var minimap_l_svg = d3.select('#graph-minimap').append('svg')
+        .attr('width', width+margin.left+margin.right)
+        .attr('height', height/4)
+    var minimap_l = minimap_l_svg.append('g').attr('transform', 'translate('+margin.left+','+margin.top+')');
+
+    minimap_l.selectAll(".nothing")
+        .data(latency).enter()
+        .append('rect')
+        .attr('width', width/binNum)
+        .attr('height', function(k){return (height-yScale_l(k))/6})
+        .attr('transform', function(k, i){return 'translate('+xScale_l(i*bin_l)+','+yScale_l(k)/6+')';});
+                                                                                                                  
+    var brush_graph_l = d3.svg.brush().x(xScale_l).on('brush', graph_brush).on('brushend',graph_brushend);  
+    var brush_graph_g_l = graph_l.append('g').attr('transform', 'translate(0,'+(height)+')');
+    brush_graph_g_l.call(brush_graph_l).selectAll('rect').attr('height', 25).style('opacity', 0.3);
+     
+    var brush_minimap_l = d3.svg.brush().x(xScale_init).on('brush', minimap_brush).on('brushend', minimap_brushend);
+    var brush_minimap_g_l = minimap_l.append('g');
+    brush_minimap_g_l.call(brush_minimap_l).selectAll('rect').attr('height', height/6).style('opacity', 0.3);
+
+    graph_l_svg.style('display', 'none');
+    minimap_l_svg.style('display', 'none');
+    updateFilter(freq);
     updateIPList(ip_list);
+
+    $('#toggle-graph label').click(function(){
+      var current = $('#toggle-graph label.active').text().trim();
+      console.log(current);
+      if(current != 'Bandwidth'){
+        isLatency = false;
+        graph_l_svg.style('display', 'none');
+        minimap_l_svg.style('display', 'none');
+        graph_svg.style('display', 'inline');
+        minimap_svg.style('display', 'inline');
+      }
+      else{
+        isLatency= true;
+        graph_l_svg.style('display', 'inline');
+        minimap_l_svg.style('display', 'inline');
+        graph_svg.style('display', 'none');
+        minimap_svg.style('display', 'none');
+      }
+    });
+
 
     // main end
 
@@ -133,7 +216,6 @@ function drawBarChart(data){
         return response;
     }
 
-    // calculate latency for each bin
     function setLatency(_ext, _extent_initial, _binNum, _bin, _filter_ext){
         var response;
         $.ajax({
@@ -157,21 +239,35 @@ function drawBarChart(data){
 
     // brush functions
     function graph_brush(){
+      if(isLatency){
+        brush_minimap_l.extent(brush_graph_l.extent());
+        brush_minimap_g_l.call(brush_minimap_l);
+      }
+      else{
         brush_minimap.extent(brush_graph.extent());
-        brush_minimap_g.call(brush_minimap);
-    }
-    function graph_brushend(){
-        updateGraph();
-    } 
-    function minimap_brush(){
-        brush_graph.extent(brush_minimap.extent());
-        brush_graph_g.call(brush_graph);
-        updateGraph();
-    }
-    function minimap_brushend(){
-        updateGraph();
+        brush_minimap_g.call(brush_minimap); 
+      }
+      //updateGraph();
     }
 
+    function graph_brushend(){
+      updateGraph();
+    } 
+
+    function minimap_brush(){
+      if(isLatency){
+        brush_graph_l.extent(brush_minimap_l.extent());
+        brush_graph_g_l.call(brush_graph_l);
+      }
+      else{
+        brush_graph.extent(brush_minimap.extent());
+        brush_graph_g.call(brush_graph);
+      }
+      updateGraph();
+    }
+    function minimap_brushend(){
+      //  updateGraph();
+    }
     function updateFilter(data){
         $('#bandwidth-filter #slider').text('');
         $('#bandwidth-filter #slider-textmin').text('');
@@ -184,7 +280,7 @@ function drawBarChart(data){
                 .min(0)
                 .max(d3.max(data) - d3.min(data))
                 .value([0, d3.max(data) - d3.min(data)])
-                .on('slide', function(evt, value){
+                .on('slideend', function(evt, value){
                     d3.select('#bandwidth-filter #slider-textmin').text(value[0]);
                     d3.select('#bandwidth-filter #slider-textmax').text(value[1]);
                     updateGraph();
@@ -192,6 +288,7 @@ function drawBarChart(data){
     }
 
     function updateGraph(){
+      if(!isLatency){
         var ext = brush_graph.extent();
         if(ext[0] == 0 && ext[1] == 0){
             ext = extent;
@@ -207,51 +304,83 @@ function drawBarChart(data){
         var filter_ext = [d3.select('#bandwidth-filter #slider-textmin').text(), d3.select('#bandwidth-filter #slider-textmax').text()]
         var newData = setData(ext, extent_initial, binNum, bin, filter_ext);
         xScale.domain([ext[0], ext[1]]);
-        //yScale.domain([0, d3.max(newData.freq, function(k){return +k;})]); 
 
-        var new_graph_bars = graph_bars.selectAll('.bar').data(newData.freq);
-         
+        var new_graph_bars = graph_bars.selectAll('.bar').data(newData.freq);         
         new_graph_bars
             .attr('class', 'bar')
-            .attr('width', width/binNum)
+            .attr('width', (width-right_width)/binNum)
             .attr('height', function(k){return height-yScale(k);})
             .attr('transform', function(k, i){return 'translate('+xScale(i*bin+ext[0])+','+yScale(k)+')';})
             .style('visibility', 'visible');
        
         new_graph_bars.exit().style('visibility', 'hidden');    
-       
         xAxis.scale(xScale);
-        //yAxis.scale(yScale);
         graph_xAxis.call(xAxis);
-        //graph_yAxis.call(yAxis);
-
         brush_graph.x(xScale).extent(ext);
         brush_graph_g.call(brush_graph);
-
         updateIPList(newData.ip_list);
-    }
-    function yScale_controlBrush(){
-      var value = yScale_controlBrush.extent()[0]; 
-      if (d3.event.sourceEvent) {
-           //value = yScale_controlScale.invert(d3.mouse(this)[0]);
-           //yScale_controlBrush.extent([value, value]);
       }
-      
-      //yScale_controlBrush.extent([value, value]);
-      graph_yControlSlider.attr('cy',yScale_controlScale(value));  
-    }
-    function yScale_controlBrushend(){
-      var ext = brush_graph.extent();
-      yScale.domain([0, yScale_controlBrush.extent()[0]]); 
-      graph_bars.selectAll('.bar')
-        .attr('width', width/binNum)
-        .attr('height', function(k){return height-yScale(k);})
-        .attr('transform', function(k, i){return 'translate('+xScale(i*bin+ext[0])+','+yScale(k)+')';})
-        .style('visibility', 'visible')
-        .style('fill', function(k){if (yScale(k)<0) return 'red';else return 'steelblue';});
-      yAxis.scale(yScale);
-      graph_yAxis.call(yAxis);    
+      else{
+        var ext = brush_graph_l.extent();
+        if(ext[0] == 0 && ext[1] == 0){
+           ext = extent;
+        }
+        if(Math.ceil((ext[1]-ext[0])/0.05)>400){
+           bin_l = (ext[1]-ext[0])/400;
+           binNum_l = 400;
+        }
+        else{
+           bin_l=0.05;
+           binNum_l = Math.ceil((ext[1]-ext[0])/0.05);
+        }
+        var filter_ext = [d3.select('#bandwidth-filter #slider-textmin').text(), d3.select('#bandwidth-filter #slider-textmax').text()]
+        var newData = setLatency(ext, extent_initial, binNum_l, bin_l, filter_ext);
+        xScale_l.domain([ext[0], ext[1]]);
 
+        var new_graph_bars = graph_bars_l.selectAll('.bar').data(newData.latency);
+        new_graph_bars
+            .attr('class', 'bar')
+            .attr('width', (width-right_width)/binNum_l)
+            .attr('height', function(k){return height-yScale_l(k);})
+            .attr('transform', function(k, i){return 'translate('+xScale_l(i*bin_l+ext[0])+','+yScale_l(k)+')';})
+            .style('visibility', 'visible');
+
+        new_graph_bars.exit().style('visibility', 'hidden');
+        xAxis_l.scale(xScale_l);
+        graph_xAxis_l.call(xAxis_l);
+        brush_graph_l.x(xScale_l).extent(ext);
+        brush_graph_g_l.call(brush_graph_l);
+        //updateIPList(newData.ip_list);
+      }
+    }
+
+    function yScale_controlBrushfunction(){
+      if(!isLatency){
+        var value = yScale_controlBrush.extent()[0];  
+        graph_yControlSlider.attr('cy',yScale_controlScale(value));  
+        var ext = brush_graph.extent();
+        yScale.domain([0, yScale_controlBrush.extent()[0]]); 
+        graph_bars.selectAll('.bar')
+          .attr('width', (width-right_width)/binNum)
+          .attr('height', function(k){return height-yScale(k);})
+          .attr('transform', function(k, i){return 'translate('+xScale(i*bin+ext[0])+','+yScale(k)+')';})
+          .style('fill', function(k){if (yScale(k)<0) return 'red';else return 'steelblue';});
+        yAxis.scale(yScale);
+        graph_yAxis.call(yAxis);      
+      }
+      else{
+        var value = yScale_controlBrush_l.extent()[0];
+        graph_yControlSlider_l.attr('cy',yScale_controlScale_l(value));
+        var ext = brush_graph_l.extent();
+        yScale_l.domain([0, yScale_controlBrush_l.extent()[0]]);
+        graph_bars_l.selectAll('.bar')
+          .attr('width', (width-right_width)/binNum_l)
+          .attr('height', function(k){return height-yScale_l(k);})
+          .attr('transform', function(k, i){return 'translate('+xScale_l(i*bin_l+ext[0])+','+yScale_l(k)+')';})
+          .style('fill', function(k){if (yScale_l(k)<0) return 'red';else return 'steelblue';});
+        yAxis_l.scale(yScale_l);
+        graph_yAxis_l.call(yAxis_l); 
+      }
     }
 }
 
