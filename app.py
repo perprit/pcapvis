@@ -40,53 +40,13 @@ def upload_pcap():
                 tcp_json = pcap_to_json(fp)
                 tcp_json_loads = json.loads(tcp_json)
                 ip_as_key = defaultdict(list)
+                sort_sd = lambda p: ','.join(sorted([str(p['src'])+":"+str(p['sport']), str(p['dst'])+":"+str(p['dport'])]))
                 for p in tcp_json_loads:
-                    src = str(p['src'])+":"+str(p['sport'])
-                    dst = str(p['dst'])+":"+str(p['dport'])
-                    sd = [src, dst]
-                    sd.sort()
-                    ip_as_key[sd[0] + ',' + sd[1]].append([p['ts'], p['flags']])
-            return tcp_json
+                    ip_as_key[sort_sd(p)].append([p['ts'], p['flags']])
+                for i, p in enumerate(tcp_json_loads):
+                    tcp_json_loads[i]['latency'] = calLatency(p['ts'], sort_sd(p))
+            return json.dumps(tcp_json_loads)
     return None
-
-
-@app.route('/setData', methods=['POST'])
-def setData():
-    global tcp_json_loads
-
-    if request.method == 'POST' and bool(tcp_json_loads):
-        req = request.get_json()
-        extent_initial = req['extent_initial']
-        ext = req['ext'] if 'ext' in req.keys() else extent_initial
-        binNum = req['binNum']
-        binSize = req['binSize']
-
-        ret = {'freq': [0 for _ in xrange(binNum)], 'ip_list': {}}
-        insiders = [d for d in tcp_json_loads if not(d["ts"] - extent_initial[0] > ext[1] or d["ts"] - extent_initial[0] < ext[0])]
-        for d in insiders:
-            idx = int(math.floor((d["ts"]-extent_initial[0]-ext[0])/binSize))
-            if idx == binNum:
-                idx-=1
-            ret['freq'][idx] += d['datalen']
-            
-            src = str(d['src'])+":"+str(d['sport'])
-            dst = str(d['dst'])+":"+str(d['dport'])
-
-            if not src in ret['ip_list']:
-                ret['ip_list'][src] = {}
-            if not dst in ret['ip_list'][src]:
-                ret['ip_list'][src][dst] = 0
-            ret['ip_list'][src][dst] += d['datalen']
-        if 'filter_ext' in req.keys():
-            filter_ext = req['filter_ext']
-            if filter_ext[0] == u'' and filter_ext[1] == u'':
-                pass
-            else:
-                filter_ext = [float(f) for f in req['filter_ext']]
-                ret['freq'] = [f if f >= filter_ext[0] and f <= filter_ext[1] else 0 for f in ret['freq']]
-        return json.dumps(ret)
-    return
-
 
 def calLatency(ts, ip_key):
     global ip_as_key
@@ -112,6 +72,42 @@ def calLatency(ts, ip_key):
     else:
         return 0
 
+@app.route('/setData', methods=['POST'])
+def setData():
+    global tcp_json_loads
+
+    if request.method == 'POST' and bool(tcp_json_loads):
+        req = request.get_json()
+        extent_initial = req['extent_initial']
+        ext = req['ext'] if 'ext' in req.keys() else extent_initial
+        binNum = req['binNum']
+        binSize = req['binSize']
+        filter_ext = map(float, req['filter_ext'])
+        print filter_ext
+
+        ret = {'freq': [0 for _ in xrange(binNum)], 'ip_list': {}}
+
+        insiders = [d for d in tcp_json_loads if not(d["ts"] - extent_initial[0] > ext[1] or d["ts"] - extent_initial[0] < ext[0])]
+        insiders = [d for d in insiders if d['datalen'] >= filter_ext[0] and d['datalen'] <= filter_ext[1]]
+
+        for d in insiders:
+            idx = int(math.floor((d["ts"]-extent_initial[0]-ext[0])/binSize))
+            if idx == binNum:
+                idx-=1
+            ret['freq'][idx] += d['datalen']
+            
+            src = str(d['src'])+":"+str(d['sport'])
+            dst = str(d['dst'])+":"+str(d['dport'])
+
+            if not src in ret['ip_list']:
+                ret['ip_list'][src] = {}
+            if not dst in ret['ip_list'][src]:
+                ret['ip_list'][src][dst] = 0
+            ret['ip_list'][src][dst] += d['datalen']
+
+        return json.dumps(ret)
+    return
+
 
 # returns setData style json representing Latency
 # unit : second
@@ -125,33 +121,29 @@ def setLatency():
         ext = req['ext'] if 'ext' in req.keys() else extent_initial
         binNum = req['binNum']
         binSize = req['binSize']
+        filter_ext = map(float, req['filter_ext'])
 
         ret = {'latency': [0 for _ in xrange(binNum)], 'ip_list': {}}
+
         insiders = [d for d in tcp_json_loads if not(d["ts"] - extent_initial[0] > ext[1] or d["ts"] - extent_initial[0] < ext[0])]
+        insiders = [d for d in insiders if d['latency'] >= filter_ext[0] and d['latency'] <= filter_ext[1]]
 
         for d in insiders:
             idx = int(math.floor((d['ts']-extent_initial[0]-ext[0])/binSize))
             if idx == binNum:
                 idx -= 1
+
+            ret['latency'][idx] += d['latency']
+
             src = str(d['src'])+":"+str(d['sport'])
             dst = str(d['dst'])+":"+str(d['dport'])
-            sd = [src, dst]
-            sd.sort()
-            lat = calLatency(d['ts'], sd[0] + ',' + sd[1])
-            ret['latency'][idx] += lat
 
             if not src in ret['ip_list']:
                 ret['ip_list'][src] = {}
             if not dst in ret['ip_list'][src]:
                 ret['ip_list'][src][dst] = 0
-            ret['ip_list'][src][dst] += lat
-        if 'filter_ext' in req.keys():
-            filter_ext = req['filter_ext']
-            if filter_ext[0] == u'' and filter_ext[1] == u'':
-                pass
-            else:
-                filter_ext = [float(f) for f in req['filter_ext']]
-                ret['latency'] = [f if f >= filter_ext[0] and f <= filter_ext[1] else 0 for f in ret['latency']]
+            ret['ip_list'][src][dst] += d['latency']
+
         return json.dumps(ret)
     return
 

@@ -31,6 +31,7 @@ $(function() {
     });
 });
 
+
 function drawBarChart(data){   
     var isLatency = false; //false: freq true: latency
     
@@ -45,9 +46,16 @@ function drawBarChart(data){
     var bin_l = bin;
     var binNum_l = binNum;
 
-    var initialData = setData(extent, extent_initial, binNum, bin);
-    var initialLatency = setLatency(extent, extent_initial, binNum, bin);
-    console.log(initialLatency);
+    drawFilter(data);
+
+    var datalen_minmax = d3.extent(data, function(d){ return d.datalen; });
+    var latency_minmax = d3.extent(data, function(d){ return d.latency; });
+
+    var initialData = setData(extent, extent_initial, binNum, bin, datalen_minmax);
+    var initialLatency = setLatency(extent, extent_initial, binNum, bin, latency_minmax);
+    
+    //console.log(initialLatency);
+    
     var freq = initialData.freq;
     var ip_list = initialData.ip_list;
     
@@ -169,7 +177,6 @@ function drawBarChart(data){
 
     graph_l_svg.style('display', 'none');
     minimap_l_svg.style('display', 'none');
-    updateFilter(freq);
     updateIPList(ip_list);
 
     $('#toggle-graph label').click(function(){
@@ -193,6 +200,45 @@ function drawBarChart(data){
 
 
     // main end
+
+    function drawFilter(data){
+        var datalen_minmax = d3.extent(data, function(d){ return d.datalen; });
+        var latency_minmax = d3.extent(data, function(d){ return d.latency; });
+        $('#bandwidth-filter #b-slider').text('');
+        $('#bandwidth-filter #b-slider-textmin').text('');
+        $('#bandwidth-filter #b-slider-textmax').text('');
+        $('#latency-filter #l-slider').text('');
+        $('#latency-filter #l-slider-textmin').text('');
+        $('#latency-filter #l-slider-textmax').text('');
+        d3.select('#bandwidth-filter #b-slider-type').text('Bandwidth filter');
+        d3.select('#bandwidth-filter #b-slider-textmin').text(datalen_minmax[0]);
+        d3.select('#bandwidth-filter #b-slider-textmax').text(datalen_minmax[1]);
+        d3.select('#latency-filter #l-slider-type').text('Latency filter');
+        d3.select('#latency-filter #l-slider-textmin').text(latency_minmax[0]);
+        d3.select('#latency-filter #l-slider-textmax').text(latency_minmax[1]);
+        d3.select('#bandwidth-filter #b-slider')
+            .call(d3.slider()
+                .axis(true)
+                .min(datalen_minmax[0])
+                .max(datalen_minmax[1])
+                .value(datalen_minmax)
+                .on('slideend', function(evt, value){
+                    d3.select('#bandwidth-filter #b-slider-textmin').text(value[0]);
+                    d3.select('#bandwidth-filter #b-slider-textmax').text(value[1]);
+                    updateGraph();
+                }));
+        d3.select('#latency-filter #l-slider')
+            .call(d3.slider()
+                .axis(true)
+                .min(latency_minmax[0])
+                .max(latency_minmax[1])
+                .value(latency_minmax)
+                .on('slideend', function(evt, value){
+                    d3.select('#latency-filter #l-slider-textmin').text(value[0]);
+                    d3.select('#latency-filter #l-slider-textmax').text(value[1]);
+                    updateGraph();
+                }));
+    }
 
     // calculate sum of datalen for each bin
     function setData(_ext, _extent_initial, _binNum, _bin, _filter_ext){
@@ -268,24 +314,6 @@ function drawBarChart(data){
     function minimap_brushend(){
       //  updateGraph();
     }
-    function updateFilter(data){
-        $('#bandwidth-filter #slider').text('');
-        $('#bandwidth-filter #slider-textmin').text('');
-        $('#bandwidth-filter #slider-textmax').text('');
-        $('#bandwidth-filter #slider-type').text('');
-        d3.select('#bandwidth-filter #slider-type').text('Bandwidth filter');
-        d3.select('#bandwidth-filter #slider')
-            .call(d3.slider()
-                .axis(true)
-                .min(0)
-                .max(d3.max(data) - d3.min(data))
-                .value([0, d3.max(data) - d3.min(data)])
-                .on('slideend', function(evt, value){
-                    d3.select('#bandwidth-filter #slider-textmin').text(value[0]);
-                    d3.select('#bandwidth-filter #slider-textmax').text(value[1]);
-                    updateGraph();
-                }));
-    }
 
     function updateGraph(){
       if(!isLatency){
@@ -301,7 +329,7 @@ function drawBarChart(data){
             bin=0.05;
             binNum = Math.ceil((ext[1]-ext[0])/0.05);
         }
-        var filter_ext = [d3.select('#bandwidth-filter #slider-textmin').text(), d3.select('#bandwidth-filter #slider-textmax').text()]
+        var filter_ext = [d3.select('#bandwidth-filter #b-slider-textmin').text(), d3.select('#bandwidth-filter #b-slider-textmax').text()]
         var newData = setData(ext, extent_initial, binNum, bin, filter_ext);
         xScale.domain([ext[0], ext[1]]);
 
@@ -333,7 +361,7 @@ function drawBarChart(data){
            bin_l=0.05;
            binNum_l = Math.ceil((ext[1]-ext[0])/0.05);
         }
-        var filter_ext = [d3.select('#bandwidth-filter #slider-textmin').text(), d3.select('#bandwidth-filter #slider-textmax').text()]
+        var filter_ext = [d3.select('#latency-filter #l-slider-textmin').text(), d3.select('#latency-filter #l-slider-textmax').text()]
         var newData = setLatency(ext, extent_initial, binNum_l, bin_l, filter_ext);
         xScale_l.domain([ext[0], ext[1]]);
 
