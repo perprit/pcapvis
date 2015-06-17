@@ -40,37 +40,50 @@ def upload_pcap():
                 tcp_json = pcap_to_json(fp)
                 tcp_json_loads = json.loads(tcp_json)
                 ip_as_key = defaultdict(list)
-                sort_sd = lambda p: ','.join(sorted([str(p['src'])+":"+str(p['sport']), str(p['dst'])+":"+str(p['dport'])]))
+
                 for p in tcp_json_loads:
-                    ip_as_key[sort_sd(p)].append([p['ts'], p['flags']])
+                    src = str(p['src'])+":"+str(p['sport'])
+                    dst = str(p['dst'])+":"+str(p['dport'])
+                    sd = ','.join(sorted([src, dst]))
+                    ip_as_key[sd].append(p)
                 for i, p in enumerate(tcp_json_loads):
-                    tcp_json_loads[i]['latency'] = calLatency(p['ts'], sort_sd(p))
+                    src = str(p['src'])+":"+str(p['sport'])
+                    dst = str(p['dst'])+":"+str(p['dport'])
+                    sd = ','.join(sorted([src, dst]))
+                    tcp_json_loads[i]['latency'] = calLatency(p['ts'], sd)
             return json.dumps(tcp_json_loads)
     return None
 
 def calLatency(ts, ip_key):
     global ip_as_key
-    tss = [t for t in ip_as_key[ip_key] if t[0] >= ts]
-    if tss[0][1]['SYN'] == True and tss[0][1]['ACK'] == False:
-        _tss = [t for t in tss if t[1]['SYN'] == True and t[1]['ACK'] == True]
-        if _tss == []:
-            return 0
-        else:
-            return _tss[0][0] - tss[0][0]
-    elif tss[0][1]['SYN'] == True and tss[0][1]['ACK'] == True:
-        _tss = [t for t in tss if t[1]['SYN'] == True and t[1]['ACK'] == False]
-        if _tss == []:
-            return 0
-        else:
-            return _tss[0][0] - tss[0][0]
-    elif tss[0][1]['FIN'] == True:
-        _tss = [t for t in tss if t[1]['ACK'] == True]
-        if _tss == []:
-            return 0
-        else:
-            return _tss[0][0] - tss[0][0]
+    tss = [t for t in ip_as_key[ip_key] if t['ts'] >= ts]
+    origin_seq, origin_ack = tss[0]['seq'], tss[0]['ack']
+    tss = [t for t in tss if t['seq']==origin_ack or t['ack']==origin_seq]
+    if len(tss) != 0:
+        return tss[0]['ts'] - ts
     else:
         return 0
+
+    # if tss[0][1]['SYN'] == True and tss[0][1]['ACK'] == False:
+    #     _tss = [t for t in tss if t[1]['SYN'] == True and t[1]['ACK'] == True]
+    #     if _tss == []:
+    #         return 0
+    #     else:
+    #         return _tss[0][0] - tss[0][0]
+    # elif tss[0][1]['SYN'] == True and tss[0][1]['ACK'] == True:
+    #     _tss = [t for t in tss if t[1]['SYN'] == True and t[1]['ACK'] == False]
+    #     if _tss == []:
+    #         return 0
+    #     else:
+    #         return _tss[0][0] - tss[0][0]
+    # elif tss[0][1]['FIN'] == True:
+    #     _tss = [t for t in tss if t[1]['ACK'] == True]
+    #     if _tss == []:
+    #         return 0
+    #     else:
+    #         return _tss[0][0] - tss[0][0]
+    # else:
+    #     return 0
 
 @app.route('/setData', methods=['POST'])
 def setData():
