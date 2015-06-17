@@ -49,6 +49,7 @@ function drawBarChart(data){
     //function setTickFormat(){
       //if(bin<1) return "HH:MM:ss.SSS";
     //}
+
     drawFilter(data);
 
     var datalen_minmax = d3.extent(data, function(d){ return d.datalen; });
@@ -222,44 +223,67 @@ function drawBarChart(data){
   
 
     function drawFilter(data){
+        $('.filters').css('visibility', 'visible');
         var datalen_minmax = d3.extent(data, function(d){ return d.datalen; });
+        var histo_datalen = [];
+        var histo_latency = [];
+        for(var i=0; i<data.length; i++){
+            histo_datalen.push(data[i].datalen);
+            histo_latency.push(data[i].latency);
+        }
         var latency_minmax = d3.extent(data, function(d){ return d.latency; });
-        $('#bandwidth-filter #b-slider').text('');
-        $('#latency-filter #l-slider').text('');
-        var b_min = d3.select('#bandwidth-filter #b-slider-textmin');
+        var b_min = $('#b-slider-textmin');
         b_min.text(datalen_minmax[0].toFixed(3));
-        var b_max = d3.select('#bandwidth-filter #b-slider-textmax');
+        var b_max = $('#b-slider-textmax');
         b_max.text(datalen_minmax[1].toFixed(3));
-        var l_min = d3.select('#latency-filter #l-slider-textmin');
+        var l_min = $('#l-slider-textmin');
         l_min.text(latency_minmax[0].toFixed(3));
-        var l_max = d3.select('#latency-filter #l-slider-textmax');
+        var l_max = $('#l-slider-textmax');
         l_max.text(latency_minmax[1].toFixed(3));
-        d3.select('#bandwidth-filter #b-slider')
-            .call(d3.slider()
-                .axis(true)
-                .min(datalen_minmax[0])
-                .max(datalen_minmax[1])
-                .value(datalen_minmax)
-                .on('slide', function(evt, value){
-                    b_min.text(value[0].toFixed(3));
-                    b_max.text(value[1].toFixed(3));   
-                })
-                .on('slideend', function(){
-                    updateGraph();
-                }));
-        d3.select('#latency-filter #l-slider')
-            .call(d3.slider()
-                .axis(true)
-                .min(latency_minmax[0])
-                .max(latency_minmax[1])
-                .value(latency_minmax)
-                .on('slide', function(evt, value){
-                    l_min.text(value[0].toFixed(3));
-                    l_max.text(value[1].toFixed(3));
-                })
-                .on('slideend', function(){
-                    updateGraph();
-                }));
+        $('#b-slider').attr('data-range_min', datalen_minmax[0]);
+        $('#b-slider').attr('data-range_max', datalen_minmax[1]);
+        $('#b-slider').attr('data-cur_min', datalen_minmax[0]);
+        $('#b-slider').attr('data-cur_max', datalen_minmax[1]);
+        $('#l-slider').attr('data-range_min', latency_minmax[0]);
+        $('#l-slider').attr('data-range_max', latency_minmax[1]);
+        $('#l-slider').attr('data-cur_min', latency_minmax[0]);
+        $('#l-slider').attr('data-cur_max', latency_minmax[1]);
+
+        $('#l-slider').nstSlider({
+            "left_grip_selector": "#l_leftGrip",
+            "right_grip_selector": "#l_rightGrip",
+            "value_bar_selector": "#l_bar",
+            "rounding": '0.000001',
+            "value_changed_callback": function(cause, leftValue, rightValue) {
+                l_min.text(leftValue.toFixed(3));
+                l_max.text(rightValue.toFixed(3));                 
+            },
+            "user_mouseup_callback": function(){
+                updateGraph();
+            }
+        });
+        $('#b-slider').nstSlider({
+            "left_grip_selector": "#b_leftGrip",
+            "right_grip_selector": "#b_rightGrip",
+            "value_bar_selector": "#b_bar",
+            "rounding": '0.000001',
+            "value_changed_callback": function(cause, leftValue, rightValue) {
+                b_min.text(leftValue.toFixed(3));
+                b_max.text(rightValue.toFixed(3));                 
+            },
+            "user_mouseup_callback": function(){
+                updateGraph();
+            }
+        });
+        $('#b-slider').nstSlider("set_range", datalen_minmax[0], datalen_minmax[1]);
+        $('#l-slider').nstSlider("set_range", latency_minmax[0], latency_minmax[1]);
+        $('#b-slider').nstSlider("set_position", datalen_minmax[0], datalen_minmax[1]);
+        $('#l-slider').nstSlider("set_position", latency_minmax[0], latency_minmax[1]);
+        $('#b-slider').nstSlider('set_step_histogram', histo_datalen);
+        $('#l-slider').nstSlider('set_step_histogram', histo_latency);
+        $('#b-slider').nstSlider('refresh');
+        $('#l-slider').nstSlider('refresh');
+        console.log(histo_latency);
     }
 
     // calculate sum of datalen for each bin

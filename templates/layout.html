@@ -7,12 +7,12 @@
     <script src="{{ url_for('static', filename='js/library/jquery-1.11.3.min.js') }}"></script>
     <script src="{{ url_for('static', filename='js/library/bootstrap.min.js') }}"></script>
     <script src="{{ url_for('static', filename='js/library/bootstrap-filestyle.min.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/library/d3.slider.js') }}"></script>
     <script src="{{ url_for('static', filename='js/library/moment.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/library/jquery.nstSlider.min.js') }}"></script>
 
     <link rel="stylesheet" href="{{ url_for('static', filename='css/library/bootstrap.min.css') }}"></link>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/library/bootstrap-theme.min.css') }}"></link>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/library/d3.slider.css') }}"></link>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/library/jquery.nstSlider.css') }}"></link>
 
     <!-- custom -->
     <script src="{{ url_for('static', filename='js/tcp.js') }}"></script>
@@ -47,13 +47,21 @@
             </div>
             <div id="bandwidth-filter" class='filters'>
                 <div id="b-slider-type"></div>
-                <div id ="b-slider" class='sliders'></div>
+                <div id="b-slider" class='nstSlider'>
+                    <div id="b_bar" class='bar'></div>
+                    <div id="b_leftGrip" class='leftGrip'></div>
+                    <div id="b_rightGrip" class='rightGrip'></div>
+                </div>
                 <div id="b-slider-textmin"></div>
                 <div id="b-slider-textmax"></div>
             </div>
             <div id="latency-filter" class='filters'>
                 <div id="l-slider-type"></div>
-                <div id ="l-slider" class='sliders'></div>
+                <div id="l-slider" class='nstSlider'>
+                    <div id="l_bar" class='bar'></div>
+                    <div id="l_leftGrip" class='leftGrip'></div>
+                    <div id="l_rightGrip" class='rightGrip'></div>
+                </div>
                 <div id="l-slider-textmin"></div>
                 <div id="l-slider-textmax"></div>
             </div>
