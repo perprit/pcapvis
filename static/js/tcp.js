@@ -344,7 +344,7 @@ function drawBarChart(data){
       updateGraph();
     }
     function minimap_brushend(){
-        updateGraph();
+        //updateGraph();
     }
 
     function updateGraph(){
@@ -618,6 +618,14 @@ function drawBarChart(data){
             var ip_group_entry = ip_list_view_group.append("div")
                 .classed("ip-entry", true)
                 .classed("unselectable", true)
+                .on("mouseenter", function(ip) {
+                    d.leaves.forEach(function(d) {
+                        // draw send/receive background bar
+                    })});
+                .on("mouseout", function(ip) {
+                    d.leaves.forEach(function(d) {
+                        // draw send/receive background bar
+                    })});
                 .on("click", function() {
                     $(this).remove();
                 });
@@ -695,10 +703,18 @@ function drawBarChart(data){
         ip_list_view_group.text("");
 
         var ip_nongroup_entry_selector = ip_list_view_nongroup.selectAll(".ip-entry");
-        var ip_nongroup_entry = ip_nongroup_entry_selector.data(ip_aggr_nongroup);
-        ip_nongroup_entry.enter().append("div")
+        var ip_nongroup_entry = ip_nongroup_entry_selector.data(ip_aggr_nongroup).enter().append("div")
             .classed("ip-entry", true)
             .classed("unselectable", true)
+
+        ip_nongroup_entry.on("mouseenter", function(ip) {
+            d.leaves.forEach(function(d) {
+                // draw send/receive background bar
+            })});
+        ip_nongroup_entry.on("mouseout", function(ip) {
+            d.leaves.forEach(function(d) {
+                // draw send/receive background bar
+            })});
 
         var ip_info = ip_nongroup_entry.append("span")
             .classed("ip-info", true);
