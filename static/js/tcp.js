@@ -402,17 +402,22 @@ function drawBarChart(data){
     }
     function yScale_resetControlBrush(){
       if(!isLatency){
+        var value = yScale_controlScale.domain()[1];
         yScale_controlScale.domain([0, d3.max(freq, function(k){return +k})]).clamp(false);
         graph_yControl.call(yScale_controlAxis);
-        graph_yControlSlider.attr('y', 0);
-        graph_yControlBrush.call(yScale_controlBrush.extent([0, 0]));
+        graph_yControlSlider.attr('y', yScale_controlScale(value));
+        graph_yControlBrush.call(yScale_controlBrush.extent([value, value]));
+        graph_yControlBrush.selectAll('.resize rect').attr('width', 20).attr('height', 10).attr('transform', 'translate(0, -5)');
+        graph_yControlBrush.selectAll('.extent').attr('height', 10).attr('width', 20).attr('transform', 'translate(0, -5)').style('visibility', 'hidden');
+
       }
       else{
         yScale_controlScale_l.domain([0, d3.max(latency, function(k){return +k})]).clamp(false);
         graph_yControl_l.call(yScale_controlAxis_l);
         graph_yControlSlider_l.attr('y', 0);
-        graph_yControlBrush_l.call(yScale_controlBrush_l.extent([0, 0]));   
-
+        graph_yControlBrush_l.call(yScale_controlBrush_l.extent([value, value])); 
+        graph_yControlBrush_l.selectAll('.resize rect').attr('width', 20).attr('height', 10).attr('transform', 'translate(0, -5)');
+        graph_yControlBrush_l.selectAll('.extent').attr('height', 10).attr('width', _l20).attr('transform', 'translate(0, -5)').style('visibility', 'hidden');
       }
     }
 
