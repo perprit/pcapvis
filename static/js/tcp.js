@@ -53,7 +53,7 @@ function drawBarChart(data){
 
     var initialData = setData(extent, extent_initial, binNum, bin, datalen_minmax, latency_minmax);
     
-    
+
     var freq = initialData.freq;
     var ip_list = initialData.b_ip_list;
     
@@ -209,6 +209,9 @@ function drawBarChart(data){
         minimap_l_svg.style('display', 'none');
         graph_svg.style('display', 'inline');
         minimap_svg.style('display', 'inline');
+        $('#ip-list-header .value').text("Traffic(Packet)");
+        $('#ip-list-group').text("");
+        $('#ip-list-nongroup').text("");
       }
       else{
         isLatency= true;
@@ -216,6 +219,9 @@ function drawBarChart(data){
         minimap_l_svg.style('display', 'inline');
         graph_svg.style('display', 'none');
         minimap_svg.style('display', 'none');
+        $('#ip-list-header .value').text("Latency(Second)");
+        $('#ip-list-group').text("");
+        $('#ip-list-nongroup').text("");
       }
     });
 
@@ -338,7 +344,7 @@ function drawBarChart(data){
       updateGraph();
     }
     function minimap_brushend(){
-      //  updateGraph();
+        updateGraph();
     }
 
     function updateGraph(){
@@ -423,6 +429,7 @@ function drawBarChart(data){
         graph_yAxis_l.call(yAxis_l); 
       }
     }
+
     function yScale_resetControlBrush(){
       if(!isLatency){
         var value = yScale_controlScale.domain()[1];
@@ -460,114 +467,311 @@ function drawBarChart(data){
       graph_yControlBrush_l.call(yScale_controlBrush_l.extent([0, 0]));
       }
     }
-}
 
-function updateIPList(data){
-    var ip_list = [];
-    var obj_src = Object.keys(data);
-    obj_src.forEach(function(src){
-        var obj_dst = Object.keys(data[src]);
-        obj_dst.forEach(function(dst){
-            var parsed = {s_ip: [], s_port: 0, d_ip: [], d_port: 0, datalen: 0};
-            for(var i=0; i<4; i++) {
-                parsed.s_ip.push(src.split(":")[0].split(".")[i]);
-                parsed.d_ip.push(dst.split(":")[0].split(".")[i]);
-            }
-            parsed.s_port = src.split(":")[1];
-            parsed.d_port = dst.split(":")[1];
-            parsed.datalen = data[src][dst];
-            ip_list.push(parsed);
+    function updateIPList(data){
+        var ip_list = [];
+        // initializing ip_list
+        var obj_src = Object.keys(data);
+        obj_src.forEach(function(src){
+            var obj_dst = Object.keys(data[src]);
+            obj_dst.forEach(function(dst){
+                var parsed = {src_ip: [], src_port: 0, dst_ip: [], dst_port: 0, datalen: 0};
+                for(var i=0; i<4; i++) {
+                    parsed.src_ip.push(src.split(":")[0].split(".")[i]);
+                    parsed.dst_ip.push(dst.split(":")[0].split(".")[i]);
+                }
+                parsed.src_port = src.split(":")[1];
+                parsed.dst_port = dst.split(":")[1];
+                parsed.datalen = data[src][dst];
+                ip_list.push(parsed);
+            });
         });
-    });
-    var s_ip_nest = d3.nest()
-        .key(function(d) { return d.s_ip[0]; })
-        .key(function(d) { return d.s_ip[1]; })
-        .key(function(d) { return d.s_ip[2]; })
-        .key(function(d) { return d.s_ip[3]; })
-        .entries(ip_list);
-    var s_port_nest = d3.nest()
-        .key(function(d) { return d.s_port; })
-        .entries(ip_list);
-    var d_ip_nest = d3.nest()
-        .key(function(d) { return d.d_ip[0]; })
-        .key(function(d) { return d.d_ip[1]; })
-        .key(function(d) { return d.d_ip[2]; })
-        .key(function(d) { return d.d_ip[3]; })
-        .entries(ip_list);
-    var d_port_nest = d3.nest()
-        .key(function(d) { return d.d_port; })
-        .entries(ip_list);
 
-    ip_list.sort(function(a, b) { return b.datalen - a.datalen });
-    var ip_list_view = d3.select("#ip-list");
-    ip_list_view.text("");
-    ip_list.forEach(function(ip) {
-        var ip_entry = ip_list_view.append("li")
+        function aggregateIPs(ips, aggregationType) {
+            var flat = [];
+            switch(aggregationType) {
+                case 0:  // src[0~3](===src) - dst[0~3](===dst)
+                    var nest = d3.nest()
+                        .key(function(d) { return d.src_ip; })
+                        .key(function(d) { return d.dst_ip; })
+                        .rollup(function(leaves) {
+                            return { leaves: leaves, datalen: d3.sum(leaves, function(d) {return d.datalen;})}; })
+                        .entries(ips);
+                    nest.forEach(function(d) {
+                        d.values.forEach(function(v) {
+                            flat.push({src_ip: d.key.split(","), dst_ip: v.key.split(","), datalen: v.values.datalen, leaves: v.values.leaves, type: 0});
+                        }); 
+                    });
+                    break;
+                case 1:  // src[0] -> *
+                    var nest = d3.nest()
+                        .key(function(d) { return d.src_ip[0]; })
+                        .rollup(function(leaves) {
+                            return { leaves: leaves, datalen: d3.sum(leaves, function(d) {return d.datalen;})}; })
+                        .entries(ips);
+                    nest.forEach(function(d) {
+                        flat.push({src_ip: d.key.split(","), dst_ip: [], datalen: d.values.datalen, leaves: d.values.leaves, type: 1});
+                    });
+                    break;
+                case 2:  // src[0~1] -> *
+                    var nest = d3.nest()
+                        .key(function(d) { return [d.src_ip[0], d.src_ip[1]].join(","); })
+                        .rollup(function(leaves) {
+                            return { leaves: leaves, datalen: d3.sum(leaves, function(d) {return d.datalen;})}; })
+                        .entries(ips);
+                    nest.forEach(function(d) {
+                        flat.push({src_ip: d.key.split(","), dst_ip: [], datalen: d.values.datalen, leaves: d.values.leaves, type: 2});
+                    });
+                    break;
+                case 3:  // src[0~2] -> *
+                    var nest = d3.nest()
+                        .key(function(d) { return [d.src_ip[0], d.src_ip[1], d.src_ip[2]].join(","); })
+                        .rollup(function(leaves) {
+                            return { leaves: leaves, datalen: d3.sum(leaves, function(d) {return d.datalen;})}; })
+                        .entries(ips);
+                    nest.forEach(function(d) {
+                        flat.push({src_ip: d.key.split(","), dst_ip: [], datalen: d.values.datalen, leaves: d.values.leaves, type: 3});
+                    });
+                    break;
+                case 4:  // src[0~3](===src) -> *
+                    var nest = d3.nest()
+                        .key(function(d) { return d.src_ip; })
+                        .rollup(function(leaves) {
+                            return { leaves: leaves, datalen: d3.sum(leaves, function(d) {return d.datalen;})}; })
+                        .entries(ips);
+                    nest.forEach(function(d) {
+                        flat.push({src_ip: d.key.split(","), dst_ip: [], datalen: d.values.datalen, leaves: d.values.leaves, type: 4});
+                    });
+                    break;
+                case 5:  // * -> dst[0]
+                    var nest = d3.nest()
+                        .key(function(d) { return d.dst_ip[0]; })
+                        .rollup(function(leaves) {
+                            return { leaves: leaves, datalen: d3.sum(leaves, function(d) {return d.datalen;})}; })
+                        .entries(ips);
+                    nest.forEach(function(d) {
+                        flat.push({src_ip: [], dst_ip: d.key.split(","), datalen: d.values.datalen, leaves: d.values.leaves, type: 5});
+                    });
+                    break;
+                case 6:  // * -> dst[0~1]
+                    var nest = d3.nest()
+                        .key(function(d) { return [d.dst_ip[0], d.dst_ip[1]].join(","); })
+                        .rollup(function(leaves) {
+                            return { leaves: leaves, datalen: d3.sum(leaves, function(d) {return d.datalen;})}; })
+                        .entries(ips);
+                    nest.forEach(function(d) {
+                        flat.push({src_ip: [], dst_ip: d.key.split(","), datalen: d.values.datalen, leaves: d.values.leaves, type: 6});
+                    });
+                    break;
+                case 7:  // * -> dst[0~2]
+                    var nest = d3.nest()
+                        .key(function(d) { return [d.dst_ip[0], d.dst_ip[1], d.dst_ip[2]].join(","); })
+                        .rollup(function(leaves) {
+                            return { leaves: leaves, datalen: d3.sum(leaves, function(d) {return d.datalen;})}; })
+                        .entries(ips);
+                    nest.forEach(function(d) {
+                        flat.push({src_ip: [], dst_ip: d.key.split(","), datalen: d.values.datalen, leaves: d.values.leaves, type: 7});
+                    });
+                    break;
+                case 8:  // * -> dst[0~3](===dst)
+                    var nest = d3.nest()
+                        .key(function(d) { return d.dst_ip; })
+                        .rollup(function(leaves) {
+                            return { leaves: leaves, datalen: d3.sum(leaves, function(d) {return d.datalen;})}; })
+                        .entries(ips);
+                    nest.forEach(function(d) {
+                        flat.push({src_ip: [], dst_ip: d.key.split(","), datalen: d.values.datalen, leaves: d.values.leaves, type: 8});
+                    });
+                    break;
+            }
+            return flat;
+        };
+
+        function makeGroupable(list, type, d) {
+            filtered_ips = list.filter( function(item) {
+                var ret = true;
+                switch(type) {
+                    case 4:
+                        ret = ret & (item.src_ip[3] === d.src_ip[3]);
+                    case 3:
+                        ret = ret & (item.src_ip[2] === d.src_ip[2]);
+                    case 2:
+                        ret = ret & (item.src_ip[1] === d.src_ip[1]);
+                    case 1:
+                        ret = ret & (item.src_ip[0] === d.src_ip[0]);
+                        break;
+                    case 8:
+                        ret = ret & (item.dst_ip[3] === d.dst_ip[3]);
+                    case 7:
+                        ret = ret & (item.dst_ip[2] === d.dst_ip[2]);
+                    case 6:
+                        ret = ret & (item.dst_ip[1] === d.dst_ip[1]);
+                    case 5:
+                        ret = ret & (item.dst_ip[0] === d.dst_ip[0]);
+                        break;
+                }
+                return ret;
+            });
+
+            list = aggregateIPs(filtered_ips, type)[0];
+
+            var ip_group_entry = ip_list_view_group.append("div")
+                .classed("ip-entry", true)
+                .classed("unselectable", true)
+                .on("click", function() {
+                    $(this).remove();
+                });
+
+            var ip_info = ip_group_entry.append("span")
+                .classed("ip-info", true);
+                // src span
+                var src_span = ip_info.append("span")
+                    .classed("src", true);
+                if(type <= 4) {
+                    if(type === 1) {
+                        src_span.text(function(){ return list.src_ip[0]; });
+                    } else if(type === 2) {
+                        src_span.text(function(){ return [list.src_ip[0], list.src_ip[1]].join("."); });
+                    } else if(type === 3) {
+                        src_span.text(function(){ return [list.src_ip[0], list.src_ip[1], list.src_ip[2]].join("."); });
+                    } else if(type === 4) {
+                        src_span.text(function(){ return [list.src_ip[0], list.src_ip[1], list.src_ip[2], list.src_ip[3]].join("."); });
+                    }
+                } else {
+                    src_span.text(function() {
+                        var leaves = list.leaves;
+                        var str = "";
+                        leaves.forEach(function(item) {
+                            str += item.src_ip.join(".")+"\n";
+                        });
+                        return str;
+                    });
+                }
+                // right-arrow
+                ip_info.append("i").classed("into", true).classed("glyphicon", true).classed("glyphicon-arrow-right", true);
+                // dst span
+                var dst_span = ip_info.append("span")
+                    .classed("dst", true);
+                if(type <= 4) {
+                    dst_span.text(function() {
+                        var leaves = list.leaves;
+                        var str = "";
+                        leaves.forEach(function(item) {
+                            str += item.dst_ip.join(".")+"\n";
+                        });
+                        return str;
+                    });
+                } else {
+                    if(type === 5) {
+                        dst_span.text(function(){ return list.dst_ip[0]; });
+                    } else if(type === 6) {
+                        dst_span.text(function(){ return [list.dst_ip[0], list.dst_ip[1]].join("."); });
+                    } else if(type === 7) {
+                        dst_span.text(function(){ return [list.dst_ip[0], list.dst_ip[1], list.dst_ip[2]].join("."); });
+                    } else if(type === 8) {
+                        dst_span.text(function(){ return [list.dst_ip[0], list.dst_ip[1], list.dst_ip[2], list.dst_ip[3]].join("."); });
+                    }
+                }
+                if(!isLatency) {
+                    ip_info.append("span")
+                        .classed("value", true)
+                        .text(function(){ return list.datalen; });
+                } else {
+                    ip_info.append("span")
+                        .classed("value", true)
+                        .text(function(){ return list.datalen.toFixed(3); });
+                }
+        }
+
+        var ip_aggr_nongroup = aggregateIPs(ip_list, 0);
+        var ip_aggr_group = [];
+
+        ip_aggr_nongroup.sort(function(a, b) { return d3.descending(a.datalen, b.datalen) });
+
+        var ip_list_view_nongroup = d3.select("#ip-list-nongroup");
+        ip_list_view_nongroup.text("");
+
+        var ip_list_view_group = d3.select("#ip-list-group");
+        ip_list_view_group.text("");
+
+        var ip_nongroup_entry_selector = ip_list_view_nongroup.selectAll(".ip-entry");
+        var ip_nongroup_entry = ip_nongroup_entry_selector.data(ip_aggr_nongroup);
+        ip_nongroup_entry.enter().append("div")
             .classed("ip-entry", true)
-            .classed("unselectable", true);
+            .classed("unselectable", true)
 
-        var ip_info = ip_entry.append("span")
+        var ip_info = ip_nongroup_entry.append("span")
             .classed("ip-info", true);
 
-        // src span
-        var src_span = ip_info.append("span")
-            .classed("src", true);
+            // src span
+            var src_span = ip_info.append("span")
+                .classed("src", true);
 
-        var ip_src_a = src_span.append("span").classed("groupable class-a", true);
-        ip_src_a.append("span").text(function(){ return ip.s_ip[0]; });
-        var ip_src_b = ip_src_a.append("span").classed("groupable class-b", true);
-        ip_src_b.append("span").text(function(){ return "."+ip.s_ip[1]; });
-        var ip_src_c = ip_src_b.append("span").classed("groupable class-c", true);
-        ip_src_c.append("span").text(function(){ return "."+ip.s_ip[2]; });
-        var ip_src_d = ip_src_c.append("span").classed("groupable class-d", true);
-        ip_src_d.append("span").text(function(){ return "."+ip.s_ip[3]; });
+            var ip_src_a = src_span.append("span").classed("ip-segment class-a", true);
+            ip_src_a.append("span").text(function(d){ return d.src_ip[0]; });
+            ip_src_a.on("click", function(d) {
+                // type 1
+                makeGroupable(ip_aggr_nongroup, 1, d);
+            });
+            var ip_src_b = src_span.append("span").classed("ip-segment class-b", true);
+            ip_src_b.append("span").text(function(d){ return "."+d.src_ip[1]; });
+            ip_src_b.on("click", function(d) {
+                // type 2
+                makeGroupable(ip_aggr_nongroup, 2, d);
+            });
+            var ip_src_c = src_span.append("span").classed("ip-segment class-c", true);
+            ip_src_c.append("span").text(function(d){ return "."+d.src_ip[2]; });
+            ip_src_c.on("click", function(d) {
+                // type 3
+                makeGroupable(ip_aggr_nongroup, 3, d);
+            });
+            var ip_src_d = src_span.append("span").classed("ip-segment class-d", true);
+            ip_src_d.append("span").text(function(d){ return "."+d.src_ip[3]; });
+            ip_src_d.on("click", function(d) {
+                // type 4
+                makeGroupable(ip_aggr_nongroup, 4, d);
+            });
 
-        src_span.append("span")
-            .text(function(){ return ":"; });
-        src_span.append("span")
-            .classed("groupable port", true)
-            .text(function(){ return ip.s_port; });
+            // right-arrow
+            ip_info.append("i").classed("into", true).classed("glyphicon", true).classed("glyphicon-arrow-right", true);
 
-        // right-arrow
-        ip_info.append("i")
-            .classed("into", true)
-            .classed("glyphicon", true)
-            .classed("glyphicon-arrow-right", true);
+            // dst span
+            var dst_span = ip_info.append("span")
+                .classed("dst", true);
 
-        // dst span
-        var dst_span = ip_info.append("span")
-            .classed("dst", true);
+            var ip_dst_a = dst_span.append("span").classed("ip-segment class-a", true);
+            ip_dst_a.append("span").text(function(d){ return d.dst_ip[0]; });
+            ip_dst_a.on("click", function(d) {
+                // type 5
+                makeGroupable(ip_aggr_nongroup, 5, d);
+            });
+            var ip_dst_b = dst_span.append("span").classed("ip-segment class-b", true);
+            ip_dst_b.append("span").text(function(d){ return "."+d.dst_ip[1]; });
+            ip_dst_b.on("click", function(d) {
+                // type 6
+                makeGroupable(ip_aggr_nongroup, 6, d);
+            });
+            var ip_dst_c = dst_span.append("span").classed("ip-segment class-c", true);
+            ip_dst_c.append("span").text(function(d){ return "."+d.dst_ip[2]; });
+            ip_dst_c.on("click", function(d) {
+                // type 7
+                makeGroupable(ip_aggr_nongroup, 7, d);
+            });
+            var ip_dst_d = dst_span.append("span").classed("ip-segment class-d", true);
+            ip_dst_d.append("span").text(function(d){ return "."+d.dst_ip[3]; });
+            ip_dst_d.on("click", function(d) {
+                // type 8
+                makeGroupable(ip_aggr_nongroup, 8, d);
+            });
 
-        var ip_dst_a = dst_span.append("span").classed("groupable class-a", true);
-        ip_dst_a.append("span").text(function(){ return ip.d_ip[0]; });
-        var ip_dst_b = ip_dst_a.append("span").classed("groupable class-b", true);
-        ip_dst_b.append("span").text(function(){ return "."+ip.d_ip[1]; });
-        var ip_dst_c = ip_dst_b.append("span").classed("groupable class-c", true);
-        ip_dst_c.append("span").text(function(){ return "."+ip.d_ip[2]; });
-        var ip_dst_d = ip_dst_c.append("span").classed("groupable class-d", true);
-        ip_dst_d.append("span").text(function(){ return "."+ip.d_ip[3]; });
-
-        dst_span.append("span")
-            .text(function(){ return ":"; });
-        dst_span.append("span")
-            .classed("groupable port", true)
-            .text(function(){ return ip.d_port; });
-
-        ip_entry.append("span")
-            .classed("value", true)
-            .text(function(){ return ip.datalen; });
-    });
-
-
-    //var ip_input = $('#ip-input');
-    //ip_input.keyup(function() {
-        //var input = ip_input[0].value;
-        //$("#ip-list > p").each(function() {
-            //if($(this).text().search(input) > -1) {
-                //$(this).show();
-            //} else {
-                //$(this).hide();
-            //}
-        //});
-    //});
+            if(!isLatency) {
+                ip_info.append("span")
+                    .classed("value", true)
+                    .text(function(d){ return d.datalen; });
+            } else {
+                ip_info.append("span")
+                    .classed("value", true)
+                    .text(function(d){ return d.datalen.toFixed(3); });
+            }
+        }
 }
