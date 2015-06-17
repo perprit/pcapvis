@@ -54,16 +54,15 @@ function drawBarChart(data){
     var datalen_minmax = d3.extent(data, function(d){ return d.datalen; });
     var latency_minmax = d3.extent(data, function(d){ return d.latency; });
 
-    var initialData = setData(extent, extent_initial, binNum, bin, datalen_minmax);
-    var initialLatency = setLatency(extent, extent_initial, binNum, bin, latency_minmax);
+    var initialData = setData(extent, extent_initial, binNum, bin, datalen_minmax, latency_minmax);
     
     //console.log(initialLatency);
     
     var freq = initialData.freq;
-    var ip_list = initialData.ip_list;
+    var ip_list = initialData.b_ip_list;
     
-    var latency = initialLatency.latency;
-    var ip_list_l = initialLatency.ip_list;
+    var latency = initialData.latency;
+    var ip_list_l = initialData.l_ip_list;
 
     var margin = {top: 20, right: 20, bottom: 30, left: 60};
     var width = $('#graph-view').width()-margin.left-margin.right;
@@ -225,6 +224,8 @@ function drawBarChart(data){
     function drawFilter(data){
         var datalen_minmax = d3.extent(data, function(d){ return d.datalen; });
         var latency_minmax = d3.extent(data, function(d){ return d.latency; });
+        $('#bandwidth-filter #b-slider').text('');
+        $('#latency-filter #l-slider').text('');
         var b_min = d3.select('#bandwidth-filter #b-slider-textmin');
         b_min.text(datalen_minmax[0].toFixed(3));
         var b_max = d3.select('#bandwidth-filter #b-slider-textmax');
@@ -262,33 +263,12 @@ function drawBarChart(data){
     }
 
     // calculate sum of datalen for each bin
-    function setData(_ext, _extent_initial, _binNum, _bin, _filter_ext){
+    function setData(_ext, _extent_initial, _binNum, _bin, _b_filter_ext, _l_filter_ext){
         var response;
         $.ajax({
             type: 'POST',
             url: '/setData',
-            data: JSON.stringify({ext: _ext, extent_initial: _extent_initial, binNum: _binNum, binSize: _bin, filter_ext: _filter_ext}),
-            dataType: 'json',
-            contentType: 'application/json',
-            async: false,
-            success: function(data) {
-                response = data;
-            },
-            error: function(jqXHR, textStatus, errorThrown) {
-                alert(textStatus + ", " + errorThrown);
-            },
-            complete: function() {
-            }
-        });
-        return response;
-    }
-
-    function setLatency(_ext, _extent_initial, _binNum, _bin, _filter_ext){
-        var response;
-        $.ajax({
-            type: 'POST',
-            url: '/setLatency',
-            data: JSON.stringify({ext: _ext, extent_initial: _extent_initial, binNum: _binNum, binSize: _bin, filter_ext: _filter_ext}),
+            data: JSON.stringify({ext: _ext, extent_initial: _extent_initial, binNum: _binNum, binSize: _bin, b_filter_ext: _b_filter_ext, l_filter_ext: _l_filter_ext}),
             dataType: 'json',
             contentType: 'application/json',
             async: false,
@@ -337,7 +317,6 @@ function drawBarChart(data){
     }
 
     function updateGraph(){
-      if(!isLatency){
         var ext = brush_graph.extent();
         if(ext[0] == 0 && ext[1] == 0){
             ext = extent;
@@ -350,57 +329,45 @@ function drawBarChart(data){
             bin=0.05;
             binNum = Math.ceil((ext[1]-ext[0])/0.05);
         }
-        var filter_ext = [d3.select('#bandwidth-filter #b-slider-textmin').text(), d3.select('#bandwidth-filter #b-slider-textmax').text()]
-        var newData = setData(ext, extent_initial, binNum, bin, filter_ext);
+        var b_filter_ext = [d3.select('#bandwidth-filter #b-slider-textmin').text(), d3.select('#bandwidth-filter #b-slider-textmax').text()]
+        var l_filter_ext = [d3.select('#latency-filter #l-slider-textmin').text(), d3.select('#latency-filter #l-slider-textmax').text()]
+        var newData = setData(ext, extent_initial, binNum_l, bin_l, b_filter_ext, l_filter_ext);
         xScale.domain([ext[0], ext[1]]);
+        xScale_l.domain([ext[0], ext[1]]);
 
-        var new_graph_bars = graph_bars.selectAll('.bar').data(newData.freq);         
+        var new_graph_bars = graph_bars.selectAll('.bar').data(newData.freq);
+        var new_graph_bars_l = graph_bars_l.selectAll('.bar').data(newData.latency);         
+        
         new_graph_bars
             .attr('class', 'bar')
             .attr('width', (width-right_width)/binNum)
             .attr('height', function(k){return height-yScale(k);})
             .attr('transform', function(k, i){return 'translate('+xScale(i*bin+ext[0])+','+yScale(k)+')';})
             .style('visibility', 'visible');
-       
-        new_graph_bars.exit().style('visibility', 'hidden');    
-        xAxis.scale(xScale);
-        graph_xAxis.call(xAxis);
-        brush_graph.x(xScale).extent(ext);
-        brush_graph_g.call(brush_graph);
-        updateIPList(newData.ip_list);
-      }
-      else{
-        var ext = brush_graph_l.extent();
-        if(ext[0] == 0 && ext[1] == 0){
-           ext = extent;
-        }
-        if(Math.ceil((ext[1]-ext[0])/0.05)>400){
-           bin_l = (ext[1]-ext[0])/400;
-           binNum_l = 400;
-        }
-        else{
-           bin_l=0.05;
-           binNum_l = Math.ceil((ext[1]-ext[0])/0.05);
-        }
-        var filter_ext = [d3.select('#latency-filter #l-slider-textmin').text(), d3.select('#latency-filter #l-slider-textmax').text()]
-        var newData = setLatency(ext, extent_initial, binNum_l, bin_l, filter_ext);
-        xScale_l.domain([ext[0], ext[1]]);
 
-        var new_graph_bars = graph_bars_l.selectAll('.bar').data(newData.latency);
-        new_graph_bars
+        new_graph_bars_l
             .attr('class', 'bar')
             .attr('width', (width-right_width)/binNum_l)
             .attr('height', function(k){return height-yScale_l(k);})
             .attr('transform', function(k, i){return 'translate('+xScale_l(i*bin_l+ext[0])+','+yScale_l(k)+')';})
             .style('visibility', 'visible');
-
-        new_graph_bars.exit().style('visibility', 'hidden');
+        
+        if(isLatency){
+            new_graph_bars.exit().style('visibility', 'hidden');
+            updateIPList(newData.l_ip_list);
+        }
+        else{
+            new_graph_bars.exit().style('visibility', 'hidden');
+            updateIPList(newData.b_ip_list); 
+        }
+        xAxis.scale(xScale);
         xAxis_l.scale(xScale_l);
+        graph_xAxis.call(xAxis);
         graph_xAxis_l.call(xAxis_l);
+        brush_graph.x(xScale).extent(ext);
         brush_graph_l.x(xScale_l).extent(ext);
+        brush_graph_g.call(brush_graph);
         brush_graph_g_l.call(brush_graph_l);
-        //updateIPList(newData.ip_list);
-      }
     }
 
     function yScale_controlBrushfunction(){
