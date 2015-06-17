@@ -8,6 +8,7 @@
     <script src="{{ url_for('static', filename='js/library/bootstrap.min.js') }}"></script>
     <script src="{{ url_for('static', filename='js/library/bootstrap-filestyle.min.js') }}"></script>
     <script src="{{ url_for('static', filename='js/library/d3.slider.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/library/moment.js') }}"></script>
 
     <link rel="stylesheet" href="{{ url_for('static', filename='css/library/bootstrap.min.css') }}"></link>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/library/bootstrap-theme.min.css') }}"></link>
@@ -45,16 +46,16 @@
             <div id="graph-minimap">
             </div>
             <div id="bandwidth-filter">
-                <span id="b-slider-type"></span>
-                <span id="b-slider-textmin"></span>
-                <span id="b-slider-textmax"></span>
-                <div id="b-slider"></div>
+                <div id="b-slider-type"></div>
+                <div id ="b-slider"></div>
+                <div id="b-slider-textmin"></div>
+                <div id="b-slider-textmax"></div>
             </div>
             <div id="latency-filter">
-                <span id="l-slider-type"></span>
-                <span id="l-slider-textmin"></span>
-                <span id="l-slider-textmax"></span>
-                <div id="l-slider"></div>
+                <div id="l-slider-type"></div>
+                <div id ="l-slider"></div>
+                <div id="l-slider-textmin"></div>
+                <div id="l-slider-textmax"></div>
             </div>
         </div>
         <div class="col-md-4">
