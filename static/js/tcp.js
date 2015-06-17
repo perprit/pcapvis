@@ -46,10 +46,6 @@ function drawBarChart(data){
     var bin_l = bin;
     var binNum_l = binNum;
 
-    //function setTickFormat(){
-      //if(bin<1) return "HH:MM:ss.SSS";
-    //}
-
     drawFilter(data);
 
     var datalen_minmax = d3.extent(data, function(d){ return d.datalen; });
@@ -57,7 +53,6 @@ function drawBarChart(data){
 
     var initialData = setData(extent, extent_initial, binNum, bin, datalen_minmax, latency_minmax);
     
-    //console.log(initialLatency);
     
     var freq = initialData.freq;
     var ip_list = initialData.b_ip_list;
@@ -76,7 +71,7 @@ function drawBarChart(data){
     
     var yScale_controlScale = d3.scale.linear().range([height, 0]).domain([0, d3.max(freq, function(k){return +k;})]).clamp(true);
     var yScale_controlAxis = d3.svg.axis().scale(yScale_controlScale).orient('left');
-    var yScale_controlBrush = d3.svg.brush().y(yScale_controlScale).extent([0, 0]).on('brush', yScale_controlBrushfunction);
+    var yScale_controlBrush = d3.svg.brush().y(yScale_controlScale).extent([0, 0]).on('brush', yScale_controlBrushfunction).on('brushend', yScale_controlBrushend);
 
     var xScale_l = d3.scale.linear().range([0, width-margin.left-margin.right-right_width]).domain([extent[0], extent[1]]).clamp(true);
     var xScale_l_init = d3.scale.linear().range([0, width-margin.left-margin.right-right_width]).domain([extent[0], extent[1]]);
@@ -84,8 +79,8 @@ function drawBarChart(data){
 
     var yScale_controlScale_l = d3.scale.linear().range([height, 0]).domain([0, d3.max(latency, function(k){return +k;})]).clamp(true);
     var yScale_controlAxis_l = d3.svg.axis().scale(yScale_controlScale_l).orient('left');
-    var yScale_controlBrush_l = d3.svg.brush().y(yScale_controlScale_l).extent([0, 0]).on('brush', yScale_controlBrushfunction);
-    //console.log(moment.unix(extent_initial[0]).format('YYYY/MM/DD HH:mm:ss:SSS'), moment.unix(extent_initial[1]).format('YYYY/MM/DD HH:mm:ss:SSS'));
+    var yScale_controlBrush_l = d3.svg.brush().y(yScale_controlScale_l).extent([0, 0]).on('brush', yScale_controlBrushfunction).on('brushend', yScale_controlBrushend);
+    
     var xAxis = d3.svg.axis().scale(xScale).orient('bottom').tickFormat(function(k){
       var t = moment.unix(k+extent_initial[0]);
       if(binNum!=400) return t.format('HH:mm:ss.SSS');
@@ -117,10 +112,12 @@ function drawBarChart(data){
     graph_yControlBrush.selectAll('.extent,.resize').remove();
     
     var graph_yControlSlider = graph_yControlBrush.append('rect').attr('width', 20).attr('height', 10).attr('transform', 'translate(0, -5)');
-    graph_yControlBrush.call(yScale_controlBrush.extent([0, 0]));
+    graph_yControlBrush.call(yScale_controlBrush.extent([6000, 6000]));
     graph_yControlBrush.selectAll('.resize rect').attr('width', 20).attr('height', 10).attr('transform', 'translate(0, -5)');
-
-
+    var graph_yControlReset = graph_yControl.append('rect').attr('width', 20).attr('height', 10)
+                                .attr('transform', 'translate(0,'+-15+ ')').style('fill', 'red')
+                                .on('click', yScale_resetControlBrush);
+                                
     var graph_xAxis_l = graph_l.append('g').attr('class', 'x axis').attr("transform", "translate(0," + height + ")").call(xAxis_l);
     var graph_yAxis_l = graph_l.append('g').attr('class', 'y axis').call(yAxis_l);
     var graph_yControl_l = graph_l.append('g').attr('class', 'y axis').attr('transform', 'translate('+width+')').call(yScale_controlAxis_l);
@@ -130,6 +127,10 @@ function drawBarChart(data){
     var graph_yControlSlider_l = graph_yControlBrush_l.append('rect').attr('width', 20).attr('height', 10).attr('transform', 'translate(0, -5)');
     graph_yControlBrush_l.call(yScale_controlBrush_l.extent([0, 0]));
     graph_yControlBrush_l.selectAll('.resize rect').attr('width', 20).attr('height', 10).attr('transform', 'translate(0, -5)');
+    var graph_yControlReset_l = graph_yControl_l.append('rect').attr('width', 20).attr('height', 10)
+                                .attr('transform', 'translate(0, -15)').style('fill', 'red')
+                                .on('click', yScale_resetControlBrush);
+
 
     var graph_bars = graph.append('g');
     graph_bars.selectAll('.bar').data(freq).enter().append('rect')
@@ -405,10 +406,6 @@ function drawBarChart(data){
           .attr('width', (width-right_width)/binNum)
           .attr('height', function(k){return height-yScale(k);})
           .attr('transform', function(k, i){return 'translate('+xScale(i*bin+ext[0])+','+yScale(k)+')';});
-        //graph_bars.transition().duration(500)
-        //  .style('fill', function(k){if (yScale(k)<0) return 'red';else return 'steelblue';});
-        //graph_bars.transition().duration(500)
-          //.style('fill', 'steelblue');
         yAxis.scale(yScale);
         graph_yAxis.call(yAxis);      
       }
@@ -422,9 +419,45 @@ function drawBarChart(data){
           .attr('width', (width-right_width)/binNum_l)
           .attr('height', function(k){return height-yScale_l(k);})
           .attr('transform', function(k, i){return 'translate('+xScale_l(i*bin_l+ext[0])+','+yScale_l(k)+')';});
-         // .style('fill', function(k){if (yScale_l(k)<0) return 'red';else return 'steelblue';});
         yAxis_l.scale(yScale_l);
         graph_yAxis_l.call(yAxis_l); 
+      }
+    }
+    function yScale_resetControlBrush(){
+      if(!isLatency){
+        var value = yScale_controlScale.domain()[1];
+        yScale_controlScale.domain([0, d3.max(freq, function(k){return +k})]).clamp(false);
+        graph_yControl.call(yScale_controlAxis);
+        graph_yControlSlider.attr('y', yScale_controlScale(value));
+        graph_yControlBrush.call(yScale_controlBrush.extent([value, value]));
+        graph_yControlBrush.selectAll('.resize rect').attr('width', 20).attr('height', 10).attr('transform', 'translate(0, -5)');
+        graph_yControlBrush.selectAll('.extent').attr('height', 10).attr('width', 20).attr('transform', 'translate(0, -5)').style('visibility', 'hidden');
+
+      }
+      else{
+        yScale_controlScale_l.domain([0, d3.max(latency, function(k){return +k})]).clamp(false);
+        graph_yControl_l.call(yScale_controlAxis_l);
+        graph_yControlSlider_l.attr('y', 0);
+        graph_yControlBrush_l.call(yScale_controlBrush_l.extent([value, value])); 
+        graph_yControlBrush_l.selectAll('.resize rect').attr('width', 20).attr('height', 10).attr('transform', 'translate(0, -5)');
+        graph_yControlBrush_l.selectAll('.extent').attr('height', 10).attr('width', _l20).attr('transform', 'translate(0, -5)').style('visibility', 'hidden');
+      }
+    }
+
+    function yScale_controlBrushend(){
+      if(!isLatency){
+      var value = yScale_controlBrush.extent()[0];
+      yScale_controlScale.domain([0, value]);
+      graph_yControl.call(yScale_controlAxis); 
+      graph_yControlSlider.attr('y', 0);
+      graph_yControlBrush.call(yScale_controlBrush.extent([0, 0]));
+      }
+      else{
+      var value = yScale_controlBrush_l.extent()[0];
+      yScale_controlScale_l.domain([0, value]);
+      graph_yControl_l.call(yScale_controlAxis_l);
+      graph_yControlSlider_l.attr('y', 0);
+      graph_yControlBrush_l.call(yScale_controlBrush_l.extent([0, 0]));
       }
     }
 }
