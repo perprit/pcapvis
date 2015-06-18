@@ -621,11 +621,11 @@ function drawBarChart(data){
                 .on("mouseenter", function(ip) {
                     d.leaves.forEach(function(d) {
                         // draw send/receive background bar
-                    })});
+                    });})
                 .on("mouseout", function(ip) {
                     d.leaves.forEach(function(d) {
                         // draw send/receive background bar
-                    })});
+                    });})
                 .on("click", function() {
                     $(this).remove();
                 });
@@ -648,11 +648,13 @@ function drawBarChart(data){
                 } else {
                     src_span.text(function() {
                         var leaves = list.leaves;
-                        var str = "";
+                        var src_ips = [];
                         leaves.forEach(function(item) {
-                            str += item.src_ip.join(".")+"\n";
+                            if($.inArray(item.src_ip.join("."), src_ips) === -1) {
+                                src_ips.push(item.src_ip.join("."));
+                            }
                         });
-                        return str;
+                        return src_ips.join("\n");
                     });
                 }
                 // right-arrow
@@ -663,11 +665,13 @@ function drawBarChart(data){
                 if(type <= 4) {
                     dst_span.text(function() {
                         var leaves = list.leaves;
-                        var str = "";
+                        var dst_ips = [];
                         leaves.forEach(function(item) {
-                            str += item.dst_ip.join(".")+"\n";
+                            if($.inArray(item.dst_ip.join("."), dst_ips) === -1) {
+                                dst_ips.push(item.dst_ip.join("."));
+                            }
                         });
-                        return str;
+                        return dst_ips.join("\n");
                     });
                 } else {
                     if(type === 5) {
@@ -708,13 +712,13 @@ function drawBarChart(data){
             .classed("unselectable", true)
 
         ip_nongroup_entry.on("mouseenter", function(ip) {
-            d.leaves.forEach(function(d) {
+            ip.leaves.forEach(function(d) {
                 // draw send/receive background bar
-            })});
+            });});
         ip_nongroup_entry.on("mouseout", function(ip) {
-            d.leaves.forEach(function(d) {
+            ip.leaves.forEach(function(d) {
                 // draw send/receive background bar
-            })});
+            });});
 
         var ip_info = ip_nongroup_entry.append("span")
             .classed("ip-info", true);
