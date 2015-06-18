@@ -363,7 +363,8 @@ function drawBarChart(data){
         var b_filter_ext = [d3.select('#bandwidth-filter #b-slider-textmin').text(), d3.select('#bandwidth-filter #b-slider-textmax').text()]
         var l_filter_ext = [d3.select('#latency-filter #l-slider-textmin').text(), d3.select('#latency-filter #l-slider-textmax').text()]
         var newData = setData(ext, extent_initial, binNum_l, bin_l, b_filter_ext, l_filter_ext);
-        xScale.domain([ext[0], ext[1]]);
+        var newext = d3.extent(newData.freq, function(k){return +k;});
+        xScale.domain([newext[0], newext[1]]);
         xScale_l.domain([ext[0], ext[1]]);
 
         var new_graph_bars = graph_bars.selectAll('.bar').data(newData.freq);
@@ -512,6 +513,7 @@ function drawBarChart(data){
                     nest.forEach(function(d) {
                         flat.push({src_ip: d.key.split(","), dst_ip: [], datalen: d.values.datalen, leaves: d.values.leaves, type: 1});
                     });
+                    console.log(flat);
                     break;
                 case 2:  // src[0~1] -> *
                     var nest = d3.nest()
@@ -636,15 +638,25 @@ function drawBarChart(data){
                 var src_span = ip_info.append("span")
                     .classed("src", true);
                 if(type <= 4) {
-                    if(type === 1) {
-                        src_span.text(function(){ return list.src_ip[0]; });
-                    } else if(type === 2) {
-                        src_span.text(function(){ return [list.src_ip[0], list.src_ip[1]].join("."); });
-                    } else if(type === 3) {
-                        src_span.text(function(){ return [list.src_ip[0], list.src_ip[1], list.src_ip[2]].join("."); });
-                    } else if(type === 4) {
-                        src_span.text(function(){ return [list.src_ip[0], list.src_ip[1], list.src_ip[2], list.src_ip[3]].join("."); });
-                    }
+                    src_span.text(function() {
+                        var leaves = list.leaves;
+                        var src_ips = [];
+                        leaves.forEach(function(item) {
+                            if($.inArray(item.src_ip.join("."), src_ips) === -1) {
+                                src_ips.push(item.src_ip.join("."));
+                            }
+                        });
+                        return src_ips.join("\n");
+                    });
+                    //if(type === 1) {
+                        //src_span.text(function(){ return list.src_ip[0]; });
+                    //} else if(type === 2) {
+                        //src_span.text(function(){ return [list.src_ip[0], list.src_ip[1]].join("."); });
+                    //} else if(type === 3) {
+                        //src_span.text(function(){ return [list.src_ip[0], list.src_ip[1], list.src_ip[2]].join("."); });
+                    //} else if(type === 4) {
+                        //src_span.text(function(){ return [list.src_ip[0], list.src_ip[1], list.src_ip[2], list.src_ip[3]].join("."); });
+                    //}
                 } else {
                     src_span.text(function() {
                         var leaves = list.leaves;
@@ -674,15 +686,25 @@ function drawBarChart(data){
                         return dst_ips.join("\n");
                     });
                 } else {
-                    if(type === 5) {
-                        dst_span.text(function(){ return list.dst_ip[0]; });
-                    } else if(type === 6) {
-                        dst_span.text(function(){ return [list.dst_ip[0], list.dst_ip[1]].join("."); });
-                    } else if(type === 7) {
-                        dst_span.text(function(){ return [list.dst_ip[0], list.dst_ip[1], list.dst_ip[2]].join("."); });
-                    } else if(type === 8) {
-                        dst_span.text(function(){ return [list.dst_ip[0], list.dst_ip[1], list.dst_ip[2], list.dst_ip[3]].join("."); });
-                    }
+                    dst_span.text(function() {
+                        var leaves = list.leaves;
+                        var dst_ips = [];
+                        leaves.forEach(function(item) {
+                            if($.inArray(item.dst_ip.join("."), dst_ips) === -1) {
+                                dst_ips.push(item.dst_ip.join("."));
+                            }
+                        });
+                        return dst_ips.join("\n");
+                    });
+                    //if(type === 5) {
+                        //dst_span.text(function(){ return list.dst_ip[0]; });
+                    //} else if(type === 6) {
+                        //dst_span.text(function(){ return [list.dst_ip[0], list.dst_ip[1]].join("."); });
+                    //} else if(type === 7) {
+                        //dst_span.text(function(){ return [list.dst_ip[0], list.dst_ip[1], list.dst_ip[2]].join("."); });
+                    //} else if(type === 8) {
+                        //dst_span.text(function(){ return [list.dst_ip[0], list.dst_ip[1], list.dst_ip[2], list.dst_ip[3]].join("."); });
+                    //}
                 }
                 if(!isLatency) {
                     ip_info.append("span")
@@ -713,6 +735,7 @@ function drawBarChart(data){
 
         ip_nongroup_entry.on("mouseenter", function(ip) {
             ip.leaves.forEach(function(d) {
+                console.log(d);
                 // draw send/receive background bar
             });});
         ip_nongroup_entry.on("mouseout", function(ip) {
