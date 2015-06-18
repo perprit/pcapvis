@@ -10,7 +10,7 @@
   border-radius: 10px;
   position: relative;
   height: 20px;
-  background: #113344;
+  background: #D9D9DA;
 }
 .nstSlider .leftGrip.gripHighlighted {
   background: #113344;
@@ -23,9 +23,11 @@
   position: absolute;
   -webkit-border-radius: 10px;
   -moz-border-radius: 10px;
+  box-shadow: rgba(0, 0, 0, 0.1) 0px 1px 2px 2px;
+  margin: 1px;
   border-radius: 10px;
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
   background: #ffffff;
 }
 .nstSlider .bar {
@@ -33,7 +35,8 @@
   -moz-border-radius: 10px;
   border-radius: 10px;
   position: absolute;
-  background: #ffffff;
+  background: #f4f4f4;
+  box-shadow: rgba(0, 0, 0, 0.06) 0px 1px 2px 2px;
   height: 8px;
   top: 6px;
 }

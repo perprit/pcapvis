@@ -146,13 +146,18 @@ function drawBarChart(data){
         .attr('width', width+margin.left+margin.right)
         .attr('height', height/4)
     var minimap= minimap_svg.append('g').attr('transform', 'translate('+margin.left+','+margin.top+')');
+    minimap.append("rect").attr("class", "bg").attr({
+        width: width-margin.left-margin.right-right_width,
+        height: height/6
+    }).style("fill", "#efefef");
 
     minimap.selectAll(".nothing")
         .data(freq).enter()
         .append('rect')
         .attr('width', width/binNum)
         .attr('height', function(k){return (height-yScale(k))/6})
-        .attr('transform', function(k, i){return 'translate('+xScale(i*bin)+','+yScale(k)/6+')';});
+        .attr('transform', function(k, i){return 'translate('+xScale(i*bin)+','+yScale(k)/6+')';})
+        .style('fill', "#575757");
   
     var brush_graph = d3.svg.brush().x(xScale).on('brush', graph_brush).on('brushend',graph_brushend);  
     var brush_graph_g = graph.append('g').attr('transform', 'translate(0,'+(height)+')');
@@ -235,6 +240,7 @@ function drawBarChart(data){
     function drawFilter(data){
         $('.filters').css('visibility', 'visible');
         var datalen_minmax = d3.extent(data, function(d){ return d.datalen; });
+        datalen_minmax[1] *= 1.1;
         var histo_datalen = [];
         var histo_latency = [];
         for(var i=0; i<data.length; i++){
@@ -242,6 +248,7 @@ function drawBarChart(data){
             histo_latency.push(data[i].latency);
         }
         var latency_minmax = d3.extent(data, function(d){ return d.latency; });
+        latency_minmax[1] *= 1.1;
         var b_min = $('#b-slider-textmin');
         b_min.text(datalen_minmax[0].toFixed(3));
         var b_max = $('#b-slider-textmax');
@@ -706,21 +713,14 @@ function drawBarChart(data){
                 .classed("ip-entry", true)
                 .classed("unselectable", true)
                 .on("mouseover", function() {
-                   updateGraphHover(d.leaves); 
-                    //d.leaves.forEach(function(d) {
-                        ////ip_group_entry.text(function() {return "description";});
-                        //// TODO draw send/receive overlay bars
-                    //});
+                    updateGraphHover(d.leaves); 
                 })
                 .on("mouseout", function() {
-                   updateGraphHover(); 
-                    //d.leaves.forEach(function(d) {
-                        //// removed send/receive overlay bars
-                        //$(".description").remove();
-                    //});
+                    updateGraphHover(); 
                 })
                 .on("click", function() {
                     $(this).remove();
+                    updateGraph(); 
                 });
 
             var ip_info = ip_group_entry.append("span")
