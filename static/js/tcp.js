@@ -5,6 +5,9 @@ $(function() {
         overlay.appendTo($("body"));
         spinner.appendTo($("body"));
 
+        $("#ip-list-group").text("");
+        $("#ip-list-nongroup").text("");
+
         var form_data = new FormData($('#upload-file')[0]);
         $.ajax({
             type: 'POST',
@@ -290,16 +293,16 @@ function drawBarChart(data){
         $('#l-slider').nstSlider('set_step_histogram', histo_latency);
         $('#b-slider').nstSlider('refresh');
         $('#l-slider').nstSlider('refresh');
-        console.log(histo_latency);
+        //console.log(histo_latency);
     }
 
     // calculate sum of datalen for each bin
-    function setData(_ext, _extent_initial, _binNum, _bin, _b_filter_ext, _l_filter_ext){
+    function setData(_ext, _extent_initial, _binNum, _bin, _b_filter_ext, _l_filter_ext, _iplist){
         var response;
         $.ajax({
             type: 'POST',
             url: '/setData',
-            data: JSON.stringify({ext: _ext, extent_initial: _extent_initial, binNum: _binNum, binSize: _bin, b_filter_ext: _b_filter_ext, l_filter_ext: _l_filter_ext}),
+            data: JSON.stringify({ext: _ext, extent_initial: _extent_initial, binNum: _binNum, binSize: _bin, b_filter_ext: _b_filter_ext, l_filter_ext: _l_filter_ext, iplist: _iplist}),
             dataType: 'json',
             contentType: 'application/json',
             async: false,
@@ -349,8 +352,12 @@ function drawBarChart(data){
 
     function updateGraph(){
         var ext = brush_graph.extent();
+        var ext_l = brush_graph_l.extent();
         if(ext[0] == 0 && ext[1] == 0){
             ext = extent;
+        }
+        if(ext_l[0] == 0 && ext_l[1] == 0){
+            ext_l = extent;
         }
         if(Math.ceil((ext[1]-ext[0])/0.05)>400){
             bin = (ext[1]-ext[0])/400;
@@ -360,15 +367,24 @@ function drawBarChart(data){
             bin=0.05;
             binNum = Math.ceil((ext[1]-ext[0])/0.05);
         }
+
+        if(Math.ceil((ext_l[1]-ext_l[0])/0.05)>400){
+            bin_l = (ext_l[1]-ext_l[0])/400;
+            binNum_l = 400;
+        }
+        else{
+            bin_l=0.05;
+            binNum_l = Math.ceil((ext_l[1]-ext_l[0])/0.05);
+        }
         var b_filter_ext = [d3.select('#bandwidth-filter #b-slider-textmin').text(), d3.select('#bandwidth-filter #b-slider-textmax').text()]
         var l_filter_ext = [d3.select('#latency-filter #l-slider-textmin').text(), d3.select('#latency-filter #l-slider-textmax').text()]
-        var newData = setData(ext, extent_initial, binNum_l, bin_l, b_filter_ext, l_filter_ext);
-        var newext = d3.extent(newData.freq, function(k){return +k;});
-        xScale.domain([newext[0], newext[1]]);
-        xScale_l.domain([ext[0], ext[1]]);
+        var newData = setData(ext, extent_initial, binNum, bin, b_filter_ext, l_filter_ext);
+        var newData_l = setData(ext_l, extent_initial, binNum_l, bin_l, b_filter_ext, l_filter_ext);
+        xScale.domain([ext[0], ext[1]]);
+        xScale_l.domain([ext_l[0], ext_l[1]]);
 
         var new_graph_bars = graph_bars.selectAll('.bar').data(newData.freq);
-        var new_graph_bars_l = graph_bars_l.selectAll('.bar').data(newData.latency);         
+        var new_graph_bars_l = graph_bars_l.selectAll('.bar').data(newData_l.latency);         
         
         new_graph_bars
             .attr('class', 'bar')
@@ -381,12 +397,12 @@ function drawBarChart(data){
             .attr('class', 'bar')
             .attr('width', (width-right_width)/binNum_l)
             .attr('height', function(k){return height-yScale_l(k);})
-            .attr('transform', function(k, i){return 'translate('+xScale_l(i*bin_l+ext[0])+','+yScale_l(k)+')';})
+            .attr('transform', function(k, i){return 'translate('+xScale_l(i*bin_l+ext_l[0])+','+yScale_l(k)+')';})
             .style('visibility', 'visible');
         
         if(isLatency){
             new_graph_bars.exit().style('visibility', 'hidden');
-            updateIPList(newData.l_ip_list);
+            updateIPList(newData_l.l_ip_list);
         }
         else{
             new_graph_bars.exit().style('visibility', 'hidden');
@@ -397,7 +413,77 @@ function drawBarChart(data){
         graph_xAxis.call(xAxis);
         graph_xAxis_l.call(xAxis_l);
         brush_graph.x(xScale).extent(ext);
-        brush_graph_l.x(xScale_l).extent(ext);
+        brush_graph_l.x(xScale_l).extent(ext_l);
+        brush_graph_g.call(brush_graph);
+        brush_graph_g_l.call(brush_graph_l);
+    }
+
+    function updateGraphHover(iplist){
+        var ext = brush_graph.extent();
+        var ext_l = brush_graph_l.extent();
+        if(ext[0] == 0 && ext[1] == 0){
+            ext = extent;
+        }
+        if(ext_l[0] == 0 && ext_l[1] == 0){
+            ext_l = extent;
+        }
+        if(Math.ceil((ext[1]-ext[0])/0.05)>400){
+            bin = (ext[1]-ext[0])/400;
+            binNum = 400;
+        }
+        else{
+            bin=0.05;
+            binNum = Math.ceil((ext[1]-ext[0])/0.05);
+        }
+
+        if(Math.ceil((ext_l[1]-ext_l[0])/0.05)>400){
+            bin_l = (ext_l[1]-ext_l[0])/400;
+            binNum_l = 400;
+        }
+        else{
+            bin_l=0.05;
+            binNum_l = Math.ceil((ext_l[1]-ext_l[0])/0.05);
+        }
+        var b_filter_ext = [d3.select('#bandwidth-filter #b-slider-textmin').text(), d3.select('#bandwidth-filter #b-slider-textmax').text()]
+        var l_filter_ext = [d3.select('#latency-filter #l-slider-textmin').text(), d3.select('#latency-filter #l-slider-textmax').text()]
+        var newData = setData(ext, extent_initial, binNum, bin, b_filter_ext, l_filter_ext, iplist);
+        var newData_l = setData(ext_l, extent_initial, binNum_l, bin_l, b_filter_ext, l_filter_ext, iplist);
+        var newData_ignore = setData(ext, extent_initial, binNum, bin, b_filter_ext, l_filter_ext);
+        var newData_l_ignore = setData(ext_l, extent_initial, binNum_l, bin_l, b_filter_ext, l_filter_ext);
+        xScale.domain([ext[0], ext[1]]);
+        xScale_l.domain([ext_l[0], ext_l[1]]);
+
+        var new_graph_bars = graph_bars.selectAll('.bar').data(newData.freq);
+        var new_graph_bars_l = graph_bars_l.selectAll('.bar').data(newData_l.latency);         
+        
+        new_graph_bars
+            .attr('class', 'bar')
+            .attr('width', (width-right_width)/binNum)
+            .attr('height', function(k){return height-yScale(k);})
+            .attr('transform', function(k, i){return 'translate('+xScale(i*bin+ext[0])+','+yScale(k)+')';})
+            .style('visibility', 'visible');
+
+        new_graph_bars_l
+            .attr('class', 'bar')
+            .attr('width', (width-right_width)/binNum_l)
+            .attr('height', function(k){return height-yScale_l(k);})
+            .attr('transform', function(k, i){return 'translate('+xScale_l(i*bin_l+ext_l[0])+','+yScale_l(k)+')';})
+            .style('visibility', 'visible');
+        
+        if(isLatency){
+            new_graph_bars.exit().style('visibility', 'hidden');
+            updateIPList(newData_l_ignore.l_ip_list);
+        }
+        else{
+            new_graph_bars.exit().style('visibility', 'hidden');
+            updateIPList(newData_ignore.b_ip_list); 
+        }
+        xAxis.scale(xScale);
+        xAxis_l.scale(xScale_l);
+        graph_xAxis.call(xAxis);
+        graph_xAxis_l.call(xAxis_l);
+        brush_graph.x(xScale).extent(ext);
+        brush_graph_l.x(xScale_l).extent(ext_l);
         brush_graph_g.call(brush_graph);
         brush_graph_g_l.call(brush_graph_l);
     }
@@ -513,7 +599,6 @@ function drawBarChart(data){
                     nest.forEach(function(d) {
                         flat.push({src_ip: d.key.split(","), dst_ip: [], datalen: d.values.datalen, leaves: d.values.leaves, type: 1});
                     });
-                    console.log(flat);
                     break;
                 case 2:  // src[0~1] -> *
                     var nest = d3.nest()
@@ -620,14 +705,20 @@ function drawBarChart(data){
             var ip_group_entry = ip_list_view_group.append("div")
                 .classed("ip-entry", true)
                 .classed("unselectable", true)
-                .on("mouseenter", function(ip) {
-                    d.leaves.forEach(function(d) {
-                        // draw send/receive background bar
-                    });})
-                .on("mouseout", function(ip) {
-                    d.leaves.forEach(function(d) {
-                        // draw send/receive background bar
-                    });})
+                .on("mouseover", function() {
+                   updateGraphHover(d.leaves); 
+                    //d.leaves.forEach(function(d) {
+                        ////ip_group_entry.text(function() {return "description";});
+                        //// TODO draw send/receive overlay bars
+                    //});
+                })
+                .on("mouseout", function() {
+                   updateGraphHover(); 
+                    //d.leaves.forEach(function(d) {
+                        //// removed send/receive overlay bars
+                        //$(".description").remove();
+                    //});
+                })
                 .on("click", function() {
                     $(this).remove();
                 });
@@ -726,7 +817,6 @@ function drawBarChart(data){
         ip_list_view_nongroup.text("");
 
         var ip_list_view_group = d3.select("#ip-list-group");
-        ip_list_view_group.text("");
 
         var ip_nongroup_entry_selector = ip_list_view_nongroup.selectAll(".ip-entry");
         var ip_nongroup_entry = ip_nongroup_entry_selector.data(ip_aggr_nongroup).enter().append("div")
@@ -735,12 +825,12 @@ function drawBarChart(data){
 
         ip_nongroup_entry.on("mouseenter", function(ip) {
             ip.leaves.forEach(function(d) {
-                console.log(d);
-                // draw send/receive background bar
+                //console.log(d);
+                // TODO draw send/receive overlay bars
             });});
         ip_nongroup_entry.on("mouseout", function(ip) {
             ip.leaves.forEach(function(d) {
-                // draw send/receive background bar
+                // TODO remove send/receive overlay bars
             });});
 
         var ip_info = ip_nongroup_entry.append("span")

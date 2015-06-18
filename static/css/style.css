@@ -113,6 +113,17 @@
     color: white;
 }
 
+.description {
+    display:none;
+    position:absolute;
+    border:1px solid #333;
+    background-color:#161616;
+    border-radius:5px;
+    padding:10px;
+    color:#fff;
+    font-size:12px Arial;
+}
+
 .btn-file {
     position: relative;
     overflow: hidden;

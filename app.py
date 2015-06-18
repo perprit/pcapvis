@@ -93,6 +93,7 @@ def setData():
         req = request.get_json()
         extent_initial = req['extent_initial']
         ext = req['ext'] if 'ext' in req.keys() else extent_initial
+        iplist = req['iplist'] if 'iplist' in req.keys() else None
         binNum = req['binNum']
         binSize = req['binSize']
         b_filter_ext = map(float, req['b_filter_ext'])
@@ -103,6 +104,8 @@ def setData():
         insiders = [d for d in tcp_json_loads if not(d["ts"] - extent_initial[0] > ext[1] or d["ts"] - extent_initial[0] < ext[0])]
         insiders = [d for d in insiders if d['latency'] >= l_filter_ext[0] and d['latency'] <= l_filter_ext[1]]
         insiders = [d for d in insiders if d['datalen'] >= b_filter_ext[0] and d['datalen'] <= b_filter_ext[1]]
+        if iplist != None:
+            insiders = [d for d in insiders if d['src'] in ['.'.join(p['src_ip']) for p in iplist] and d['dst'] in ['.'.join(p['dst_ip']) for p in iplist]]
 
         for d in insiders:
             idx = int(math.floor((d["ts"]-extent_initial[0]-ext[0])/binSize))
